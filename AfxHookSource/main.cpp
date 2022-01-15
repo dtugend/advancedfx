@@ -3,6 +3,8 @@
 // TODO:
 // - Memory for Wrp* is never freed atm
 
+#include "jsonrpc/main.h"
+
 #include <windows.h>
 
 #include <shared/StringTools.h>
@@ -2765,6 +2767,51 @@ CAfxImportDllHook g_Import_PROCESS_KERNEL32("KERNEL32.dll", CAfxImportDllHooks({
 CAfxImportsHook g_Import_PROCESS(CAfxImportsHooks({
 	&g_Import_PROCESS_KERNEL32 }));
 
+
+LPSTR AfxGetEnvironmentVariable(LPCSTR pszVarName) {
+	DWORD dwRet, dwErr;
+	LPSTR pszVal;
+
+	pszVal = (LPSTR)malloc(4096 * sizeof(TCHAR));
+	if (NULL == pszVal)
+	{
+		return NULL;
+	}
+
+	dwRet = GetEnvironmentVariableA(pszVarName, pszVal, 4096);
+
+	if (0 == dwRet)
+	{
+		dwErr = GetLastError();
+		if (ERROR_ENVVAR_NOT_FOUND == dwErr)
+		{
+			free(pszVal);
+			return NULL;
+		}
+	}
+	else if (4096 < dwRet)
+	{
+		pszVal = (LPSTR)realloc(pszVal, dwRet * sizeof(TCHAR));
+		if (NULL == pszVal)
+		{
+			return NULL;
+		}
+		dwRet = GetEnvironmentVariableA(pszVarName, pszVal, dwRet);
+		if (!dwRet)
+		{
+			// GetLastError();
+			free(pszVal);
+			return NULL;
+		}
+	}
+
+	return pszVal;
+}
+
+void AfxFreeEnvironmentVariableResult(LPSTR result) {
+	free(result);
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
 	switch (fdwReason) 
@@ -2804,13 +2851,25 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 #ifdef AFX_INTEROP
 			AfxInterop::DllProcessAttach();
 #endif
-
 			AfxHookSource::Gui::DllProcessAttach();
+
+			LPTSTR szAFXGUI_PIPE_READ = AfxGetEnvironmentVariable("AFXGUI_PIPE_READ");
+			LPTSTR szAFXGUI_PIPE_WRITE = AfxGetEnvironmentVariable("AFXGUI_PIPE_WRITE");
+
+			MessageBoxA(0, szAFXGUI_PIPE_READ, szAFXGUI_PIPE_WRITE, MB_OK);
+
+			if(szAFXGUI_PIPE_READ && szAFXGUI_PIPE_WRITE)
+				InitJsonRpc(atoi(szAFXGUI_PIPE_READ), atoi(szAFXGUI_PIPE_WRITE));
+
+			AfxFreeEnvironmentVariableResult(szAFXGUI_PIPE_WRITE);
+			AfxFreeEnvironmentVariableResult(szAFXGUI_PIPE_READ);
 
 			break;
 		}
 		case DLL_PROCESS_DETACH:
 		{
+			ShutdownJsonRpc();
+
 			// actually this gets called now.
 
 			MatRenderContextHook_Shutdown();

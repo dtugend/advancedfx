@@ -1,5 +1,10 @@
 #pragma once
 
+#include "jsonrpc/main.h"
+
+#include <list>
+#include <queue>
+
 #include <d3d9.h>
 
 namespace AfxHookSource {
@@ -19,7 +24,7 @@ bool OnSetCapture(HWND hWnd, HWND & result);
 bool OnReleaseCapture();
 bool OnGameFrameRenderEnd();
 
-bool On_Direct3DDevice9_Init(void* hwnd, IDirect3DDevice9* device);
+bool On_Direct3DDevice9_Init(void* hwnd, IDirect3DDevice9* device, UINT width, UINT height);
 void On_Direct3DDevice9_Shutdown();
 
 void On_Direct3DDevice9_EndScene();
@@ -27,6 +32,12 @@ void On_Direct3DDevice9_Present(bool deviceLost);
 void On_Direct3DDevice9_Reset_Before();
 void On_Direct3DDevice9_Reset_After();
 
+void SetSharedTextureHandleThreadSafe(HANDLE handle);
+void LockSharedTextueThreadSafe();
+void UnlockSharedTextureThreadSafe();
+
+void SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor cursor);
+void SetHasKeyboardFocus(bool value);
 
 } // namespace Gui {
 } // namespace AfxHookSource {

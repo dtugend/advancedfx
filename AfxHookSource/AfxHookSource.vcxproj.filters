@@ -217,6 +217,27 @@
     <Filter Include="AfxHookSource\csgo\hooks\engine">
       <UniqueIdentifier>{ca277372-6aeb-4fb1-bb5f-8a49f2aa7745}</UniqueIdentifier>
     </Filter>
+    <Filter Include="deps\release\json-rpc-cxx">
+      <UniqueIdentifier>{6a681b77-d9b4-4909-aa1c-c0cfa486f23a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\release\json">
+      <UniqueIdentifier>{59f6b8c4-722c-4ccd-8597-4173e4310c9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\release\json\include">
+      <UniqueIdentifier>{56fb8a4c-4064-4642-9ad7-2c7eba3c573f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\release\json\include\nlohman">
+      <UniqueIdentifier>{73f7831a-0fbc-48a7-affa-5540e47f6a5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\release\json-rpc-cxx\include">
+      <UniqueIdentifier>{ca4c3138-619d-460e-be57-4b8edd3c1e97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps\release\json-rpc-cxx\include\jsonrpccxx">
+      <UniqueIdentifier>{a3c836bc-91c0-407b-a47d-b0a20d088b42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AfxHookSource\jsonrpc">
+      <UniqueIdentifier>{043e1b35-53c5-483f-8f4e-d5e8f31b32c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\shared\bvhexport.cpp">
@@ -500,6 +521,9 @@
     </ClCompile>
     <ClCompile Include="csgo\hooks\engine\cmd.cpp">
       <Filter>AfxHookSource\csgo\hooks\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="jsonrpc\main.cpp">
+      <Filter>AfxHookSource\jsonrpc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -925,6 +949,12 @@
     </ClInclude>
     <ClInclude Include="csgo\hooks\engine\cmd.h">
       <Filter>AfxHookSource\csgo\hooks\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deps\release\json-rpc-cxx\include\jsonrpccxx\server.hpp">
+      <Filter>deps\release\json-rpc-cxx\include\jsonrpccxx</Filter>
+    </ClInclude>
+    <ClInclude Include="jsonrpc\main.h">
+      <Filter>AfxHookSource\jsonrpc</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

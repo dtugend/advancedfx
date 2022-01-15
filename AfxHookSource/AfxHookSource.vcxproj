@@ -21,6 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3B8B10B2-05E6-4D15-8022-65D3D60DCCCD}</ProjectGuid>
     <RootNamespace>AfxHookSource</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -77,10 +78,11 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;../deps/release/json/include;../deps/release/json-rpc-cxx/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
       <ObjectFileName>$(IntDir)%(RelativeDir)/</ObjectFileName>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -98,10 +100,11 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;../deps/release/json/include;../deps/release/json-rpc-cxx/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
       <ObjectFileName>$(IntDir)%(RelativeDir)/</ObjectFileName>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -119,10 +122,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;../deps/release/json/include;../deps/release/json-rpc-cxx/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
       <ObjectFileName>$(IntDir)%(RelativeDir)/</ObjectFileName>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -143,10 +147,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;../deps\release\prop/AfxHookSource;../;../deps\release\prop;$(OPENEXR_BUILD_DIR)/include/OpenEXR;$(ILMBASE_BUILD_DIR)/include/OpenEXR;$(PROTOBUF_SOURCE_DIR)/src;../deps/release/json/include;../deps/release/json-rpc-cxx/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
       <ObjectFileName>$(IntDir)%(RelativeDir)/</ObjectFileName>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -233,6 +238,7 @@
     <ClCompile Include="FovScaling.cpp" />
     <ClCompile Include="Gui.cpp" />
     <ClCompile Include="hlaeFolder.cpp" />
+    <ClCompile Include="jsonrpc\main.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MatRenderContextHook.cpp" />
     <ClCompile Include="MirvCam.cpp" />
@@ -255,6 +261,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\build\protobuf\csgo\netmessages.pb.h" />
+    <ClInclude Include="..\deps\release\json-rpc-cxx\include\jsonrpccxx\server.hpp" />
     <ClInclude Include="..\deps\release\prop\AfxHookSource\csgo\bitbuf\demofilebitbuf.h" />
     <ClInclude Include="..\deps\release\rapidxml\rapidxml.hpp" />
     <ClInclude Include="..\deps\release\rapidxml\rapidxml_iterators.hpp" />
@@ -370,6 +377,7 @@
     <ClInclude Include="FovScaling.h" />
     <ClInclude Include="Gui.h" />
     <ClInclude Include="hlaeFolder.h" />
+    <ClInclude Include="jsonrpc\main.h" />
     <ClInclude Include="MatRenderContextHook.h" />
     <ClInclude Include="MirvCam.h" />
     <ClInclude Include="MirvCalcs.h" />
