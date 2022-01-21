@@ -1021,7 +1021,7 @@ bool OnSetCursor(__in_opt HCURSOR hCursor, HCURSOR & result)
 	if (m_PassThrough)
 		return false;
 
-	if (m_WantMouseCapture)
+	if (!m_WantMouseCapture)
 	{
 		m_OwnCursor = m_Cursors.GetFromGame(hCursor, IsInMouseLook());
 	}
@@ -1102,7 +1102,7 @@ void CreateSharedTexture(HANDLE handle) {
 	std::unique_lock<std::mutex> lock(m_SharedTextureMutex);
 	m_SharedTextureHandle = handle;
 	if (INVALID_HANDLE_VALUE != m_SharedTextureHandle && g_pd3dDevice && 0 < m_Width && 0 < m_Height) {
-		if (SUCCEEDED(g_pd3dDevice->CreateTexture(m_Width, m_Height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_SharedTexture, &m_SharedTextureHandle)))
+		if (SUCCEEDED(g_pd3dDevice->CreateTexture(m_Width, m_Height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_SharedTexture, &m_SharedTextureHandle)))
 		{
 
 		}
@@ -1160,7 +1160,7 @@ void On_Direct3DDevice9_EndScene()
 
 		std::unique_lock<std::mutex> lock(m_SharedTextureMutex);
 		if (m_SharedTexture) {
-			AfxDrawRect(m_SharedTexture, 0, 0, m_Width, m_Height, 0, 0, 1, 1);
+			AfxDrawRect(m_SharedTexture, 0, 0, m_Width, m_Height, 0, 1, 1, 0);
 		}
 	}
 }
