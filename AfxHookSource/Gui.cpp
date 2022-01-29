@@ -300,6 +300,7 @@ void SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor cursor) {
 }
 
 void KeyFromWparam(advancedfx::afxhooksource::json::KeyboardInputEvent& ev, WPARAM wParam) {
+	ev.keyCode = "";
 	switch (wParam) {
 	case 0x30:
 		ev.keyCode = "0";
@@ -616,12 +617,25 @@ void KeyFromWparam(advancedfx::afxhooksource::json::KeyboardInputEvent& ev, WPAR
 	case VK_DIVIDE:
 		ev.keyCode = "numdiv";
 		break;
+	case VK_LWIN:
+	case VK_RWIN:
+		ev.keyCode = "CommandOrControl";
+		break;
+	case VK_SHIFT:
+		ev.keyCode = "Shift";
+		break;
+	case VK_MENU:
+		ev.keyCode = "Alt";
+		break;
+	case VK_CONTROL:
+		ev.keyCode = "CommandOrControl";
+		break;
 	}
 
-	if ((GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0) ev.keyCode = "Super+" + ev.keyCode;
-	if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) ev.keyCode = "Shift+" + ev.keyCode;
-	if ((GetKeyState(VK_MENU) & 0x8000) != 0) ev.keyCode = "Alt+" + ev.keyCode;
-	if ((GetKeyState(VK_CONTROL) & 0x8000) != 0) ev.keyCode = "CommandOrControl+" + ev.keyCode;
+	if (((GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0) && wParam != VK_LWIN && wParam != VK_RWIN) ev.keyCode = "Super+" + ev.keyCode;
+	if ((GetKeyState(VK_SHIFT) & 0x8000) != 0 && wParam != VK_SHIFT) ev.keyCode = "Shift+" + ev.keyCode;
+	if ((GetKeyState(VK_MENU) & 0x8000) != 0 && wParam != VK_MENU) ev.keyCode = "Alt+" + ev.keyCode;
+	if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 && wParam != VK_CONTROL) ev.keyCode = "CommandOrControl+" + ev.keyCode;
 }
 
 void DllProcessAttach(void)
@@ -728,6 +742,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			break;
 		}
 		bool handled = JsonSendMouseInputEvent(ev);
+		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		std::unique_lock<std::mutex> lock(m_CursorMutex);
 
@@ -753,8 +768,6 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 
 			if (start)
 			{
-				std::unique_lock<std::mutex> lock(m_CursorMutex);
-
 				GetCursorPos(&m_OldCursorPos);
 
 				m_IgnoreNextWM_MOUSEMOVE = m_OldCursorPos.x != m_GameCursorPos.x || m_OldCursorPos.y != m_GameCursorPos.y;
@@ -806,6 +819,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			break;
 		}
 		bool handled = JsonSendMouseInputEvent(ev);
+		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		std::unique_lock<std::mutex> lock(m_CursorMutex);
 
@@ -833,6 +847,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			break;
 		}
 		bool handled = JsonSendMouseWheelInputEvent(ev);
+		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		std::unique_lock<std::mutex> lock(m_CursorMutex);
 
@@ -852,6 +867,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			ev.globalY = globalPt.y;
 		}
 		bool handled = JsonSendMouseInputEvent(ev);
+		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		std::unique_lock<std::mutex> lock(m_CursorMutex);
 
@@ -864,6 +880,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		ev.type = "keyDown";
 		KeyFromWparam(ev, wParam);
 		bool handled = JsonSendKeyboardInputEvent(ev);
+		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		if (wParam < 256)
 		{
@@ -878,6 +895,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		ev.type = "keyUp";
 		KeyFromWparam(ev, wParam);
 		bool handled = JsonSendKeyboardInputEvent(ev);
+		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		bool wasKeyDownEaten = false;
 		if (wParam < 256)
@@ -890,16 +908,23 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 	case WM_CHAR:
 	{
 		bool handled = false;
-		if (wParam > 0 && wParam < 0x10000)
+		// https://docs.microsoft.com/en-us/windows/win32/learnwin32/keyboard-input#character-messages
+		// ""Some CTRL key combinations are translated into ASCII control characters. For example, CTRL+A is translated to the ASCII ctrl-A (SOH) character (ASCII value 0x01). For text input, you should generally filter out the control characters.
+		// https://www.aivosto.com/articles/control-characters.html
+		if(!(
+			0 <= wParam && wParam <= 0x07
+			|| 0x0e <= wParam && wParam <= 0x1f
+			|| 0x80 <= wParam && wParam <= 0x9f
+		))
 		{
-			// You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-			wchar_t wszParam[2] = { (wchar_t)wParam, '\0' };
+			wchar_t wszParam[3] = { (wchar_t)(wParam & 0xffffffff), (wchar_t)((wParam >> 32)& 0xffffffff), L'\0' };
 			std::string utf8Str;
 			if (WideStringToUTF8String(wszParam, utf8Str)) {
 				advancedfx::afxhooksource::json::KeyboardInputEvent ev;
 				ev.type = "char";
 				ev.keyCode = utf8Str;
 				handled = JsonSendKeyboardInputEvent(ev);
+				if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 			}
 		}
 		return handled;
@@ -933,7 +958,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 	{
 		std::unique_lock<std::mutex> lock(m_CursorMutex);
 
-		if (IsInMouseLook()) return true;
+		if (IsInMouseLook()) return false;
 
 		if (m_WantMouseCapture) {
 			SetCursor(m_OwnCursor);
@@ -964,7 +989,7 @@ bool OnSetCursorPos(__in int X, __in int Y)
 
 		m_HadSetCursorMouseLook = ((width >> 1) == clientPoint.x) && ((height >> 1) == clientPoint.y);
 
-		//Tier0_Msg("%i == %i, %i == %i + (%i, %i) --> %i\n", width >> 1, clientPoint.x, height >> 1, clientPoint.y, X, Y, m_InMouseLook ? 1 : 0);
+		Tier0_Msg("%i == %i, %i == %i + (%i, %i) --> %i\n", width >> 1, clientPoint.x, height >> 1, clientPoint.y, X, Y, m_InMouseLook ? 1 : 0);
 	}
 	else
 		m_HadSetCursorMouseLook = false;
