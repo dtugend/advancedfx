@@ -382,7 +382,7 @@ namespace advancedfx {
 				CDuplexPipe m_DuplexPipe;
 				JsonRpc2Server m_RpcServer;
 				AfxHookSourceServer m_Server;
-				bool m_Quit = false;
+				std::atomic_bool m_Quit = false;
 				std::atomic_bool m_HasQuit = false;
 				std::thread m_Thread;
 			};

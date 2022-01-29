@@ -1913,6 +1913,23 @@ void* new_Client_CreateInterface(const char *pName, int *pReturnCode)
 	return pRet;
 }
 
+BOOL g_bExitProcessCalled = true;
+
+void Shared_Exit();
+
+DECLSPEC_NORETURN
+VOID
+WINAPI
+new_ExitProcess(
+	_In_ UINT uExitCode
+) {
+	if (!g_bExitProcessCalled) {
+		g_bExitProcessCalled = true;
+		Shared_Exit();
+	}
+	ExitProcess(uExitCode);
+}
+
 
 HMODULE g_H_ClientDll = 0;
 
@@ -2454,11 +2471,13 @@ CAfxImportsHook g_Import_filesystem_stdio(CAfxImportsHooks({
 CAfxImportFuncHook<HMODULE(WINAPI*)(LPCSTR)> g_Import_engine_KERNEL32_LoadLibraryA("LoadLibraryA", &new_LoadLibraryA);
 CAfxImportFuncHook<HMODULE(WINAPI*)(LPCSTR, HANDLE, DWORD)> g_Import_engine_KERNEL32_LoadLibraryExA("LoadLibraryExA", &new_LoadLibraryExA);
 CAfxImportFuncHook<FARPROC(WINAPI*)(HMODULE, LPCSTR)> g_Import_engine_KERNEL32_GetProcAddress("GetProcAddress", &new_Engine_GetProcAddress);
+CAfxImportFuncHook<VOID(WINAPI*)(UINT)> g_Import_engine_KERNEL32_ExitProcess("ExitProcess", &new_ExitProcess);
 
 CAfxImportDllHook g_Import_engine_KERNEL32("KERNEL32.dll", CAfxImportDllHooks({
 	&g_Import_engine_KERNEL32_LoadLibraryA
 	, &g_Import_engine_KERNEL32_LoadLibraryExA
-	, &g_Import_engine_KERNEL32_GetProcAddress }));
+	, &g_Import_engine_KERNEL32_GetProcAddress,
+	& g_Import_engine_KERNEL32_ExitProcess }));
 
 // actually this is not required, since engine.dll calls first and thus is lower in the chain:
 CAfxImportFuncHook<LONG(WINAPI*)(HWND, int)> g_Import_engine_USER32_GetWindowLongW("GetWindowLongW", &new_GetWindowLongW);
@@ -2812,6 +2831,26 @@ void AfxFreeEnvironmentVariableResult(LPSTR result) {
 	free(result);
 }
 
+void Shared_Exit() {
+
+	ShutdownJsonRpc();
+
+	// actually this gets called now.
+
+	MatRenderContextHook_Shutdown();
+
+	if (g_AfxBaseClientDll) { delete g_AfxBaseClientDll; g_AfxBaseClientDll = 0; }
+
+	AfxHookSource::Gui::DllProcessDetach();
+
+	delete g_CommandLine;
+
+#ifdef _DEBUG
+	_CrtDumpMemoryLeaks();
+#endif
+
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
 	switch (fdwReason) 
@@ -2856,7 +2895,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 			LPTSTR szAFXGUI_PIPE_READ = AfxGetEnvironmentVariable("AFXGUI_PIPE_READ");
 			LPTSTR szAFXGUI_PIPE_WRITE = AfxGetEnvironmentVariable("AFXGUI_PIPE_WRITE");
 
-			MessageBoxA(0, szAFXGUI_PIPE_READ, szAFXGUI_PIPE_WRITE, MB_OK);
+			//MessageBoxA(0, szAFXGUI_PIPE_READ, szAFXGUI_PIPE_WRITE, MB_OK);
 
 			if(szAFXGUI_PIPE_READ && szAFXGUI_PIPE_WRITE)
 				InitJsonRpc(atoi(szAFXGUI_PIPE_READ), atoi(szAFXGUI_PIPE_WRITE));
@@ -2868,21 +2907,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 		}
 		case DLL_PROCESS_DETACH:
 		{
-			ShutdownJsonRpc();
-
-			// actually this gets called now.
-
-			MatRenderContextHook_Shutdown();
-
-			if(g_AfxBaseClientDll) { delete g_AfxBaseClientDll; g_AfxBaseClientDll = 0; }
-
-			AfxHookSource::Gui::DllProcessDetach();
-
-			delete g_CommandLine;
-
-#ifdef _DEBUG
-			_CrtDumpMemoryLeaks();
-#endif
+			if(!g_bExitProcessCalled)
+				Shared_Exit();
 
 			break;
 		}

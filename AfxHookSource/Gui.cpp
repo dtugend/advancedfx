@@ -704,140 +704,140 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	case WM_MBUTTONDOWN:
+	{
+		advancedfx::afxhooksource::json::MouseInputEvent ev;
+		ev.type = "mouseDown";
+		POINT pt = { GET_X_LPARAM(lParam),  GET_Y_LPARAM(lParam) };
+		ev.x = pt.x;
+		ev.y = pt.y;
+		if (g_hWnd) {
+			POINT globalPt = pt;
+			ClientToScreen(g_hWnd, &globalPt);
+			ev.globalX = globalPt.x;
+			ev.globalY = globalPt.y;
+		}
+		switch (msg) {
+		case WM_LBUTTONDOWN:
+			ev.button = "left";
+			break;
+		case WM_MBUTTONDOWN:
+			ev.button = "middle";
+			break;
+		case WM_RBUTTONDOWN:
+			ev.button = "right";
+			break;
+		}
+		bool handled = JsonSendMouseInputEvent(ev);
+
+		std::unique_lock<std::mutex> lock(m_CursorMutex);
+
+		if (!handled && IsInMouseLook())
 		{
-			advancedfx::afxhooksource::json::MouseInputEvent ev;
-			ev.type = "mouseDown";
-			POINT pt = { GET_X_LPARAM(lParam),  GET_Y_LPARAM(lParam) };
-			ev.x = pt.x;
-			ev.y = pt.y;
-			if (g_hWnd) {
-				POINT globalPt = pt;
-				ClientToScreen(g_hWnd, &globalPt);
-				ev.globalX = globalPt.x;
-				ev.globalY = globalPt.y;
-			}
-			switch (msg) {
+			bool start = false;
+
+			switch (msg)
+			{
 			case WM_LBUTTONDOWN:
-				ev.button = "left";
-				break;
-			case WM_MBUTTONDOWN:
-				ev.button = "middle";
+				start = true;
+				m_EndPassThroughButtonUp = EPTBU_Left;
 				break;
 			case WM_RBUTTONDOWN:
-				ev.button = "right";
+				start = true;
+				m_EndPassThroughButtonUp = EPTBU_Right;
+				break;
+			case WM_MBUTTONDOWN:
+				start = true;
+				m_EndPassThroughButtonUp = EPTBU_Middle;
 				break;
 			}
-			bool handled = JsonSendMouseInputEvent(ev);
 
-			std::unique_lock<std::mutex> lock(m_CursorMutex);
-
-			if (!handled && IsInMouseLook())
+			if (start)
 			{
-				bool start = false;
+				std::unique_lock<std::mutex> lock(m_CursorMutex);
 
-				switch (msg)
-				{
-				case WM_LBUTTONDOWN:
-					start = true;
-					m_EndPassThroughButtonUp = EPTBU_Left;
-					break;
-				case WM_RBUTTONDOWN:
-					start = true;
-					m_EndPassThroughButtonUp = EPTBU_Right;
-					break;
-				case WM_MBUTTONDOWN:
-					start = true;
-					m_EndPassThroughButtonUp = EPTBU_Middle;
-					break;
-				}
-				
-				if (start)
-				{
-					std::unique_lock<std::mutex> lock(m_CursorMutex);
+				GetCursorPos(&m_OldCursorPos);
 
-					GetCursorPos(&m_OldCursorPos);
+				m_IgnoreNextWM_MOUSEMOVE = m_OldCursorPos.x != m_GameCursorPos.x || m_OldCursorPos.y != m_GameCursorPos.y;
 
-					m_IgnoreNextWM_MOUSEMOVE = m_OldCursorPos.x != m_GameCursorPos.x || m_OldCursorPos.y != m_GameCursorPos.y;
+				SetCursor(m_GameCursor);
+				SetCursorPos(m_GameCursorPos.x, m_GameCursorPos.y);
 
-					SetCursor(m_GameCursor);
-					SetCursorPos(m_GameCursorPos.x, m_GameCursorPos.y);
+				if (m_GameCaptured && GetCapture() == NULL)
+					SetCapture(hwnd);
 
-					if (m_GameCaptured && GetCapture() == NULL)
-						SetCapture(hwnd);
-
-					m_PassThrough = true;
-					return true;
-				}
+				m_PassThrough = true;
+				return true;
 			}
-		
-			int button = 0;
-			if (msg == WM_LBUTTONDOWN) button = 0;
-			if (msg == WM_RBUTTONDOWN) button = 1;
-			if (msg == WM_MBUTTONDOWN) button = 2;
-			if (!IsAnyMouseButtonDown() && GetCapture() == NULL)
-				SetCapture(hwnd);
-			m_MouseButtonDown[button] = true;
-			return handled || IsInMouseLook();
 		}
+
+		int button = 0;
+		if (msg == WM_LBUTTONDOWN) button = 0;
+		if (msg == WM_RBUTTONDOWN) button = 1;
+		if (msg == WM_MBUTTONDOWN) button = 2;
+		if (!IsAnyMouseButtonDown() && GetCapture() == NULL)
+			SetCapture(hwnd);
+		m_MouseButtonDown[button] = true;
+		return handled || IsInMouseLook();
+	}
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
 	case WM_MBUTTONUP:
-		{
-			advancedfx::afxhooksource::json::MouseInputEvent ev;
-			ev.type = "mouseUp";
-			POINT pt = { GET_X_LPARAM(lParam),  GET_Y_LPARAM(lParam) };
-			ev.x = pt.x;
-			ev.y = pt.y;
-			if (g_hWnd) {
-				POINT globalPt = pt;
-				ClientToScreen(g_hWnd, &globalPt);
-				ev.globalX = globalPt.x;
-				ev.globalY = globalPt.y;
-			}
-			switch (msg) {
-			case WM_LBUTTONDOWN:
-				ev.button = "left";
-				break;
-			case WM_MBUTTONDOWN:
-				ev.button = "middle";
-				break;
-			case WM_RBUTTONDOWN:
-				ev.button = "right";
-				break;
-			}
-			bool handled = JsonSendMouseInputEvent(ev);
-
-			std::unique_lock<std::mutex> lock(m_CursorMutex);
-
-			int button = 0;
-			if (msg == WM_LBUTTONUP) button = 0;
-			if (msg == WM_RBUTTONUP) button = 1;
-			if (msg == WM_MBUTTONUP) button = 2;
-			m_MouseButtonDown[button] = false;
-			if (!IsAnyMouseButtonDown() && GetCapture() == hwnd)
-				ReleaseCapture();
-			return handled || IsInMouseLook();
+	{
+		advancedfx::afxhooksource::json::MouseInputEvent ev;
+		ev.type = "mouseUp";
+		POINT pt = { GET_X_LPARAM(lParam),  GET_Y_LPARAM(lParam) };
+		ev.x = pt.x;
+		ev.y = pt.y;
+		if (g_hWnd) {
+			POINT globalPt = pt;
+			ClientToScreen(g_hWnd, &globalPt);
+			ev.globalX = globalPt.x;
+			ev.globalY = globalPt.y;
 		}
+		switch (msg) {
+		case WM_LBUTTONDOWN:
+			ev.button = "left";
+			break;
+		case WM_MBUTTONDOWN:
+			ev.button = "middle";
+			break;
+		case WM_RBUTTONDOWN:
+			ev.button = "right";
+			break;
+		}
+		bool handled = JsonSendMouseInputEvent(ev);
+
+		std::unique_lock<std::mutex> lock(m_CursorMutex);
+
+		int button = 0;
+		if (msg == WM_LBUTTONUP) button = 0;
+		if (msg == WM_RBUTTONUP) button = 1;
+		if (msg == WM_MBUTTONUP) button = 2;
+		m_MouseButtonDown[button] = false;
+		if (!IsAnyMouseButtonDown() && GetCapture() == hwnd)
+			ReleaseCapture();
+		return handled || IsInMouseLook();
+	}
 	case WM_MOUSEWHEEL:
 	case WM_MOUSEHWHEEL:
-		{
-			advancedfx::afxhooksource::json::MouseWheelInputEvent ev;
-			ev.type = "mouseWheel";
-			int zDelta = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1 : -1;
-			switch (msg) {
-			case WM_MOUSEWHEEL:
-				ev.wheelTicksX = zDelta;
-				break;
-			case WM_MOUSEHWHEEL:
-				ev.wheelTicksY = zDelta;
-				break;
-			}
-			bool handled = JsonSendMouseWheelInputEvent(ev);
-
-			std::unique_lock<std::mutex> lock(m_CursorMutex);
-
-			return handled || IsInMouseLook();
+	{
+		advancedfx::afxhooksource::json::MouseWheelInputEvent ev;
+		ev.type = "mouseWheel";
+		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1 : -1;
+		switch (msg) {
+		case WM_MOUSEWHEEL:
+			ev.wheelTicksX = zDelta;
+			break;
+		case WM_MOUSEHWHEEL:
+			ev.wheelTicksY = zDelta;
+			break;
 		}
+		bool handled = JsonSendMouseWheelInputEvent(ev);
+
+		std::unique_lock<std::mutex> lock(m_CursorMutex);
+
+		return handled || IsInMouseLook();
+	}
 	case WM_MOUSEMOVE:
 	{
 		advancedfx::afxhooksource::json::MouseInputEvent ev;
@@ -859,34 +859,34 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 	}
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-		{
-			advancedfx::afxhooksource::json::KeyboardInputEvent ev;
-			ev.type = "keyDown";
-			KeyFromWparam(ev, wParam);
-			bool handled = JsonSendKeyboardInputEvent(ev);
+	{
+		advancedfx::afxhooksource::json::KeyboardInputEvent ev;
+		ev.type = "keyDown";
+		KeyFromWparam(ev, wParam);
+		bool handled = JsonSendKeyboardInputEvent(ev);
 
-			if (wParam < 256)
-			{
-				m_KeyDownEaten[wParam] = handled;
-			}
-			return handled;
+		if (wParam < 256)
+		{
+			m_KeyDownEaten[wParam] = handled;
 		}
+		return handled;
+	}
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		{
-			advancedfx::afxhooksource::json::KeyboardInputEvent ev;
-			ev.type = "keyUp";
-			KeyFromWparam(ev, wParam);
-			bool handled = JsonSendKeyboardInputEvent(ev);
+	{
+		advancedfx::afxhooksource::json::KeyboardInputEvent ev;
+		ev.type = "keyUp";
+		KeyFromWparam(ev, wParam);
+		bool handled = JsonSendKeyboardInputEvent(ev);
 
-			bool wasKeyDownEaten = false;
-			if (wParam < 256)
-			{
-				wasKeyDownEaten = m_KeyDownEaten[wParam];
-				m_KeyDownEaten[wParam] = false;
-			}
-			return handled || wasKeyDownEaten;
+		bool wasKeyDownEaten = false;
+		if (wParam < 256)
+		{
+			wasKeyDownEaten = m_KeyDownEaten[wParam];
+			m_KeyDownEaten[wParam] = false;
 		}
+		return handled || wasKeyDownEaten;
+	}
 	case WM_CHAR:
 	{
 		bool handled = false;
@@ -902,33 +902,46 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 				handled = JsonSendKeyboardInputEvent(ev);
 			}
 		}
-		return handled;	
+		return handled;
 	}
 	case WM_INPUT:
+	{
+		HRAWINPUT hRawInput = (HRAWINPUT)lParam;
+		RAWINPUT inp;
+		UINT size = sizeof(inp);
+
+		GetRawInputData(hRawInput, RID_INPUT, &inp, &size, sizeof(RAWINPUTHEADER));
+
+		switch (inp.header.dwType)
 		{
-			HRAWINPUT hRawInput = (HRAWINPUT)lParam;
-			RAWINPUT inp;
-			UINT size = sizeof(inp);
+		case RIM_TYPEMOUSE:
+		{
+			std::unique_lock<std::mutex> lock(m_CursorMutex);
 
-			GetRawInputData(hRawInput, RID_INPUT, &inp, &size, sizeof(RAWINPUTHEADER));
-
-			switch (inp.header.dwType)
-			{
-			case RIM_TYPEMOUSE:
-			{
-				std::unique_lock<std::mutex> lock(m_CursorMutex);
-
-				return IsInMouseLook();
-			}
-			case RIM_TYPEKEYBOARD:
-			{
-				std::unique_lock<std::mutex> lock(m_CursorMutex);
-
-				return m_HasKeyBoardFocus;
-			}
-			}
-			return false;
+			return IsInMouseLook();
 		}
+		case RIM_TYPEKEYBOARD:
+		{
+			std::unique_lock<std::mutex> lock(m_CursorMutex);
+
+			return m_HasKeyBoardFocus;
+		}
+		}
+		return false;
+	}
+	case WM_SETCURSOR:
+	{
+		std::unique_lock<std::mutex> lock(m_CursorMutex);
+
+		if (IsInMouseLook()) return true;
+
+		if (m_WantMouseCapture) {
+			SetCursor(m_OwnCursor);
+			return true;
+		}
+
+		return false;
+	}
 	}
 	return false;
 }
