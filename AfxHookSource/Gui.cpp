@@ -299,6 +299,13 @@ void SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor cursor) {
 	m_HadSetCursorMouseLook = false;
 }
 
+void GetModifiers(advancedfx::afxhooksource::json::InputEvent& ev) {
+	if ((GetKeyState(VK_LWIN) & 0x8000) || (GetKeyState(VK_RWIN) & 0x8000)) ev.modifiers.meta = true;
+	if (GetKeyState(VK_SHIFT) & 0x8000) ev.modifiers.shift = true;
+	if (GetKeyState(VK_MENU) & 0x8000) ev.modifiers.alt = true;
+	if (GetKeyState(VK_CONTROL) & 0x8000) ev.modifiers.control = true;
+}
+
 void KeyFromWparam(advancedfx::afxhooksource::json::KeyboardInputEvent& ev, WPARAM wParam) {
 	ev.keyCode = "";
 	switch (wParam) {
@@ -619,7 +626,7 @@ void KeyFromWparam(advancedfx::afxhooksource::json::KeyboardInputEvent& ev, WPAR
 		break;
 	case VK_LWIN:
 	case VK_RWIN:
-		ev.keyCode = "CommandOrControl";
+		ev.keyCode = "Super";
 		break;
 	case VK_SHIFT:
 		ev.keyCode = "Shift";
@@ -631,11 +638,6 @@ void KeyFromWparam(advancedfx::afxhooksource::json::KeyboardInputEvent& ev, WPAR
 		ev.keyCode = "CommandOrControl";
 		break;
 	}
-
-	if (((GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0) && wParam != VK_LWIN && wParam != VK_RWIN) ev.keyCode = "Super+" + ev.keyCode;
-	if ((GetKeyState(VK_SHIFT) & 0x8000) != 0 && wParam != VK_SHIFT) ev.keyCode = "Shift+" + ev.keyCode;
-	if ((GetKeyState(VK_MENU) & 0x8000) != 0 && wParam != VK_MENU) ev.keyCode = "Alt+" + ev.keyCode;
-	if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 && wParam != VK_CONTROL) ev.keyCode = "CommandOrControl+" + ev.keyCode;
 }
 
 void DllProcessAttach(void)
@@ -741,6 +743,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			ev.button = "right";
 			break;
 		}
+		GetModifiers(ev);
 		bool handled = JsonSendMouseInputEvent(ev);
 		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
@@ -818,6 +821,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			ev.button = "right";
 			break;
 		}
+		GetModifiers(ev);
 		bool handled = JsonSendMouseInputEvent(ev);
 		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
@@ -837,15 +841,25 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 	{
 		advancedfx::afxhooksource::json::MouseWheelInputEvent ev;
 		ev.type = "mouseWheel";
-		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1 : -1;
+		POINT pt = { GET_X_LPARAM(lParam),  GET_Y_LPARAM(lParam) };
+		ev.x = pt.x;
+		ev.y = pt.y;
+		if (g_hWnd) {
+			POINT globalPt = pt;
+			ClientToScreen(g_hWnd, &globalPt);
+			ev.globalX = globalPt.x;
+			ev.globalY = globalPt.y;
+		}
+		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 		switch (msg) {
 		case WM_MOUSEWHEEL:
-			ev.wheelTicksX = zDelta;
+			ev.deltaY = zDelta;
 			break;
 		case WM_MOUSEHWHEEL:
-			ev.wheelTicksY = zDelta;
+			ev.deltaX = zDelta;
 			break;
 		}
+		GetModifiers(ev);
 		bool handled = JsonSendMouseWheelInputEvent(ev);
 		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
@@ -866,6 +880,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 			ev.globalX = globalPt.x;
 			ev.globalY = globalPt.y;
 		}
+		GetModifiers(ev);
 		bool handled = JsonSendMouseInputEvent(ev);
 		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
@@ -879,6 +894,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		advancedfx::afxhooksource::json::KeyboardInputEvent ev;
 		ev.type = "keyDown";
 		KeyFromWparam(ev, wParam);
+		GetModifiers(ev);
 		bool handled = JsonSendKeyboardInputEvent(ev);
 		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
@@ -894,6 +910,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		advancedfx::afxhooksource::json::KeyboardInputEvent ev;
 		ev.type = "keyUp";
 		KeyFromWparam(ev, wParam);
+		GetModifiers(ev);
 		bool handled = JsonSendKeyboardInputEvent(ev);
 		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
@@ -923,6 +940,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 				advancedfx::afxhooksource::json::KeyboardInputEvent ev;
 				ev.type = "char";
 				ev.keyCode = utf8Str;
+				GetModifiers(ev);
 				handled = JsonSendKeyboardInputEvent(ev);
 				if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 			}

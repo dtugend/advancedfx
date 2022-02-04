@@ -47,10 +47,24 @@ namespace advancedfx {
 				zoom_out
 			};
 
-			class MouseInputEvent {
+			class Modifiers {
+			public:
+				Modifiers() : shift(), control(), alt(), meta() {}
+				bool shift;
+				bool control;
+				bool alt;
+				bool meta;
+			};
+
+			class InputEvent {
+			public:
+				std::string type;
+				Modifiers modifiers;
+			};
+
+			class MouseInputEvent : public InputEvent {
 			public:
 				MouseInputEvent() :  x(), y() {}
-				std::string type;
 				int x;
 				int y;
 				std::optional<std::string> button;
@@ -61,10 +75,9 @@ namespace advancedfx {
 				std::optional<int> clickCount;
 			};
 
-			class MouseWheelInputEvent {
+			class MouseWheelInputEvent : public MouseInputEvent {
 			public:
 				MouseWheelInputEvent() {}
-				std::string type;
 				std::optional<int> deltaX;
 				std::optional<int> deltaY;
 				std::optional<int> wheelTicksX;
@@ -75,10 +88,9 @@ namespace advancedfx {
 				std::optional<bool> canScroll;
 			};
 
-			class KeyboardInputEvent {
+			class KeyboardInputEvent : public InputEvent {
 			public:
 				KeyboardInputEvent() {}
-				std::string type;
 				std::string keyCode;
 			};
 		}

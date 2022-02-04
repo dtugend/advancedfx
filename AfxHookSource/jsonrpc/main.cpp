@@ -174,13 +174,25 @@ namespace advancedfx {
 				{ cursor::zoom_out, "zoom-out" } \
 			})
 
-			inline void to_json(nlohmann::json& j, const MouseInputEvent& ev) {
-				j = nlohmann::json{
-					{"type", ev.type},
-					{"x", ev.x},
-					{"y", ev.y},
-				};
+			inline void to_json(nlohmann::json& j, const Modifiers& ev) {
+				auto jArray = nlohmann::json::array();
+				if (ev.shift) jArray.push_back("shift");
+				if (ev.control) jArray.push_back("control");
+				if (ev.alt) jArray.push_back("alt");
+				if (ev.meta) jArray.push_back("meta");
+				j = jArray;
+			}
 
+			inline void to_json(nlohmann::json& j, const InputEvent& ev) {
+				j = nlohmann::json{ {"type", ev.type}};
+				nlohmann::json modifiers;
+				to_json(j["modifiers"], ev.modifiers);
+			}
+
+			inline void to_json(nlohmann::json& j, const MouseInputEvent& ev) {
+				to_json(j, static_cast<const InputEvent&>(ev));
+				j["x"] = ev.x;
+				j["y"] = ev.y;
 				if (ev.button.has_value()) j["button"] = ev.button.value();
 				if (ev.globalX.has_value()) j["globalX"] = ev.globalX.value();
 				if (ev.globalY.has_value()) j["globalY"] = ev.globalY.value();
@@ -190,9 +202,7 @@ namespace advancedfx {
 			}
 
 			inline void to_json(nlohmann::json& j, const MouseWheelInputEvent& ev) {
-				j = nlohmann::json{
-					{"type", ev.type}
-				};
+				to_json(j, static_cast<const MouseInputEvent&>(ev));
 
 				if (ev.deltaX.has_value()) j["deltaX"] = ev.deltaX.value();
 				if (ev.deltaY.has_value()) j["deltaY"] = ev.deltaY.value();
@@ -205,10 +215,8 @@ namespace advancedfx {
 			}
 
 			inline void to_json(nlohmann::json& j, const KeyboardInputEvent& ev) {
-				j = nlohmann::json{
-					{"type", ev.type},
-					{"keyCode", ev.keyCode}
-				};
+				to_json(j, static_cast<const InputEvent&>(ev));
+				j["keyCode"] = ev.keyCode;
 			}
 
 			class Handle {
