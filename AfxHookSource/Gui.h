@@ -37,7 +37,6 @@ void LockSharedTextueThreadSafe();
 void UnlockSharedTextureThreadSafe();
 
 void SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor cursor);
-void SetHasKeyboardFocus(bool value);
 
 } // namespace Gui {
 } // namespace AfxHookSource {

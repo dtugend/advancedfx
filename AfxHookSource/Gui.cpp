@@ -53,6 +53,9 @@ bool m_GameCaptured = false;
 bool m_InMouseLook = false;
 bool m_HadSetCursorMouseLook = false;
 bool m_MouseButtonDown[3]={ false,false,false };
+bool m_HasKeyBoardFocus = false;
+
+std::mutex m_CursorMutex;
 bool m_WantMouseCapture = false;
 
 int m_Width = 0;
@@ -256,19 +259,6 @@ enum EndPassThrougButtonUp
 EndPassThrougButtonUp m_EndPassThroughButtonUp = EPTBU_Left;
 bool m_IgnoreNextWM_MOUSEMOVE = false;
 
-
-std::mutex m_CursorMutex;
-
-bool m_HasKeyBoardFocus = false;
-
-
-void SetHasKeyboardFocus(bool value) {
-
-	std::unique_lock<std::mutex> lock(m_CursorMutex);
-
-	m_HasKeyBoardFocus = value;
-}
-
 void SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor cursor) {
 
 	std::unique_lock<std::mutex> lock(m_CursorMutex);
@@ -294,9 +284,6 @@ void SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor cursor) {
 		m_OwnCursor = hCursor;
 		SetCursor(m_OwnCursor);
 	}
-
-	m_InMouseLook = m_HadSetCursorMouseLook;
-	m_HadSetCursorMouseLook = false;
 }
 
 void GetModifiers(advancedfx::afxhooksource::json::InputEvent& ev) {
@@ -896,7 +883,8 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		KeyFromWparam(ev, wParam);
 		GetModifiers(ev);
 		bool handled = JsonSendKeyboardInputEvent(ev);
-		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
+		m_HasKeyBoardFocus = handled;
+		//if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		if (wParam < 256)
 		{
@@ -912,7 +900,8 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		KeyFromWparam(ev, wParam);
 		GetModifiers(ev);
 		bool handled = JsonSendKeyboardInputEvent(ev);
-		if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
+		m_HasKeyBoardFocus = handled;
+		//if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 
 		bool wasKeyDownEaten = false;
 		if (wParam < 256)
@@ -942,7 +931,8 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 				ev.keyCode = utf8Str;
 				GetModifiers(ev);
 				handled = JsonSendKeyboardInputEvent(ev);
-				if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
+				m_HasKeyBoardFocus = handled;
+				//if (!handled) SetMouseCursorThreadSafe(advancedfx::afxhooksource::json::cursor::cursor_auto);
 			}
 		}
 		return handled;
@@ -961,7 +951,7 @@ bool WndProcHandler(HWND hwnd, UINT msg, WPARAM & wParam, LPARAM & lParam)
 		{
 			std::unique_lock<std::mutex> lock(m_CursorMutex);
 
-			return IsInMouseLook();
+			return m_WantMouseCapture || IsInMouseLook();
 		}
 		case RIM_TYPEKEYBOARD:
 		{
@@ -1007,7 +997,7 @@ bool OnSetCursorPos(__in int X, __in int Y)
 
 		m_HadSetCursorMouseLook = ((width >> 1) == clientPoint.x) && ((height >> 1) == clientPoint.y);
 
-		Tier0_Msg("%i == %i, %i == %i + (%i, %i) --> %i\n", width >> 1, clientPoint.x, height >> 1, clientPoint.y, X, Y, m_InMouseLook ? 1 : 0);
+		//Tier0_Msg("%i == %i, %i == %i + (%i, %i) --> %i\n", width >> 1, clientPoint.x, height >> 1, clientPoint.y, X, Y, m_InMouseLook ? 1 : 0);
 	}
 	else
 		m_HadSetCursorMouseLook = false;
@@ -1266,6 +1256,11 @@ bool OnGameFrameRenderEnd()
 	//io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
 	// ...
+	{
+		std::unique_lock<std::mutex> lock(m_CursorMutex);
+		m_InMouseLook = m_HadSetCursorMouseLook;
+		m_HadSetCursorMouseLook = false;
+	}
 
 	return true;
 }

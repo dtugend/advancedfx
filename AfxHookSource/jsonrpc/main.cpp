@@ -316,7 +316,6 @@ namespace advancedfx {
 				void SetMouseCursor(advancedfx::afxhooksource::json::cursor cursor);
 				void LockSharedTexture();
 				void UnlockSharedTexture();
-				void AfxHookSourceServer::SetHasKeyboardFocus(bool value);
 			private:
 			};
 
@@ -333,9 +332,6 @@ namespace advancedfx {
 			}
 			void AfxHookSourceServer::UnlockSharedTexture() {
 				AfxHookSource::Gui::UnlockSharedTextureThreadSafe();
-			}
-			void AfxHookSourceServer::SetHasKeyboardFocus(bool value) {
-				AfxHookSource::Gui::SetHasKeyboardFocus(value);
 			}
 
 			void ThrowExcepetion(const std::exception& e) {
@@ -354,7 +350,6 @@ namespace advancedfx {
 					m_RpcServer.Add("SetMouseCursor", GetHandle(&AfxHookSourceServer::SetMouseCursor, m_Server), {"cursor"});
 					m_RpcServer.Add("LockSharedTexture", GetHandle(&AfxHookSourceServer::LockSharedTexture, m_Server), {});
 					m_RpcServer.Add("UnlockSharedTexture", GetHandle(&AfxHookSourceServer::UnlockSharedTexture, m_Server), {});
-					m_RpcServer.Add("SetHasKeyboardFocus", GetHandle(&AfxHookSourceServer::UnlockSharedTexture, m_Server), {"value"});
 
 					m_Thread = std::thread(&CJsonRpcServer::HandleRequests, this);
 				}
