@@ -4,6 +4,9 @@
 
 #include <shared/binutils.h>
 
+#include <cstdio>
+#include <vector>
+
 SourceSdkVer g_SourceSdkVer = SourceSdkVer_Unknonw;
 
 using namespace Afx::BinUtils;
@@ -38,6 +41,7 @@ AFXADDR_DEF(csgo_CSkyboxView_Draw)
 AFXADDR_DEF(csgo_CSkyboxView_Draw_DSZ)
 AFXADDR_DEF(csgo_CViewRender_RenderView_VGui_DrawHud_In)
 AFXADDR_DEF(csgo_CViewRender_RenderView_VGui_DrawHud_Out)
+AFXADDR_DEF(csgo_CViewRender_ShouldForceNoVis_vtable_index)
 AFXADDR_DEF(csgo_g_AudioDevice2)
 AFXADDR_DEF(csgo_MIX_PaintChannels)
 AFXADDR_DEF(csgo_MIX_PaintChannels_DSZ)
@@ -88,6 +92,7 @@ AFXADDR_DEF(csgo_C_BaseEntity_ShouldInterpolate)
 AFXADDR_DEF(csgo_C_CS_PlayerResource_IGameResources_vtable)
 AFXADDR_DEF(csgo_C_Team_vtable)
 AFXADDR_DEF(csgo_engine_CModelLoader_vtable)
+AFXADDR_DEF(csgo_engine_CModelLoader_GetModel_vtable_index)
 AFXADDR_DEF(csgo_client_C_TEPlayerAnimEvent_PostDataUpdate_NewModelAnims_JNZ)
 AFXADDR_DEF(csgo_materialsystem_CMaterialSystem_ForceSingleThreaded)
 AFXADDR_DEF(csgo_engine_Do_CCLCMsg_FileCRCCheck)
@@ -95,6 +100,31 @@ AFXADDR_DEF(csgo_C_BaseViewModel_FireEvent)
 AFXADDR_DEF(csgo_client_AdjustInterpolationAmount)
 //AFXADDR_DEF(csgo_C_BaseEntity_ofs_m_bPredictable)
 AFXADDR_DEF(csgo_engine_Cmd_ExecuteCommand)
+AFXADDR_DEF(csgo_client_C_CSPlayer_EyeAngles_vtable_index)
+AFXADDR_DEF(csgo_client_C_CS_Player_GetFOV_vtable_index)
+AFXADDR_DEF(csgo_client_C_CSPlayer_UpdateOnRemove_vtable_index)
+AFXADDR_DEF(csgo_client_CPlayerResource_Dtor_vtable_index)
+AFXADDR_DEF(csgo_client_CPlayerResource_GetPing_vtable_index)
+AFXADDR_DEF(csgo_materialsystem_Material_InterlockedDecrement_vtable_index)
+AFXADDR_DEF(csgo_engine_CAudioXAudio2_UnkSupplyAudio_vtable_index)
+AFXADDR_DEF(csgo_client_C_Team_Get_ClanName_vtable_index)
+AFXADDR_DEF(csgo_client_C_Team_Get_FlagImageString_vtable_index)
+AFXADDR_DEF(csgo_client_C_Team_Get_LogoImageString_vtable_index)
+AFXADDR_DEF(csgo_client_CPlayerResource_GetPlayerName_vtable_index)
+AFXADDR_DEF(csgo_client_CCSViewRender_RenderView_vtable_index)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_1_OFS)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_1_LEN)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_2_OFS)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_2_LEN)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_3_OFS)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_3_LEN)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_4_OFS)
+AFXADDR_DEF(csgo_client_CanSeeSpectatorOnlyTools_4_LEN)
+AFXADDR_DEF(csgo_client_CCSGO_MapOverview_CanShowOverview)
+AFXADDR_DEF(csgo_client_CCSGO_Scoreboard_OpenScoreboard_jz_addr)
+AFXADDR_DEF(csgo_client_CCSGO_MapOverview_FireGameEvent)
+AFXADDR_DEF(csgo_client_CCSGO_MapOverview_ProcessInput)
+AFXADDR_DEF(csgo_client_g_bEngineIsHLTV)
 
 void ErrorBox(char const * messageText);
 
@@ -178,6 +208,8 @@ void Addresses_InitEngineDll(AfxAddr engineDll, SourceSdkVer sourceSdkVer)
 {
 	if (SourceSdkVer_CSGO == sourceSdkVer)
 	{
+		AFXADDR_SET(csgo_engine_CAudioXAudio2_UnkSupplyAudio_vtable_index, 1);
+
 		// csgo_snd_mix_timescale_patch: // Checked 2018-12-07.
 		{
 			DWORD addr = 0;
@@ -551,9 +583,10 @@ void Addresses_InitEngineDll(AfxAddr engineDll, SourceSdkVer sourceSdkVer)
 			AFXADDR_SET(csgo_CNetChan_ProcessMessages, addr);
 		}
 
-		// csgo_engine_CModelLoader_vtable
+		// csgo_engine_CModelLoader_vtable	
 		AFXADDR_SET(csgo_engine_CModelLoader_vtable, FindClassVtable((HMODULE)engineDll, ".?AVCModelLoader@@", 0, 0x0));
 		if (!AFXADDR_GET(csgo_engine_CModelLoader_vtable)) ErrorBox(MkErrStr(__FILE__, __LINE__));
+		AFXADDR_SET(csgo_engine_CModelLoader_GetModel_vtable_index, 7);
 
 		// csgo_engine_Do_CCLCMsg_FileCRCCheck
 		// This function is called right after a function that references the string "CheckUpdatingSteamResources"
@@ -789,11 +822,14 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 					
 			}
 			else ErrorBox(MkErrStr(__FILE__,__LINE__));
-
 		}
+		AFXADDR_SET(csgo_CViewRender_ShouldForceNoVis_vtable_index, 42);
 
+		// Smoke overlay related.
+		//
 		// csgo_CCSViewRender_RenderSmokeOverlay_OnLoadOldAlpha: // Checked 2020-06-16.
 		// csgo_CCSViewRender_RenderSmokeOverlay_OnLoadAlphaBeforeDraw: // Checked 2021-04-28.
+		// If these change, multiple ASM snippets and offsets need to be changed in csgo_CViewRender.cpp
 		{
 			DWORD addrOnLoadOldAlpha = 0;
 			DWORD addrOnCompareAlphaBeforeDraw = 0;
@@ -868,6 +904,8 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 			AFXADDR_SET(csgo_CCSViewRender_RenderSmokeOverlay_OnLoadOldAlpha, addrOnLoadOldAlpha);
 			AFXADDR_SET(csgo_CCSViewRender_RenderSmokeOverlay_OnCompareAlphaBeforeDraw, addrOnCompareAlphaBeforeDraw);
 		}
+		AFXADDR_SET(csgo_client_CCSViewRender_RenderView_vtable_index, 6);
+
 
 		// csgo_CSkyboxView_Draw: // Checked 2017-05-13.
 		{
@@ -1896,7 +1934,17 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 
 			AFXADDR_SET(csgo_crosshair_localplayer_check, addr);
 		}
+		
+		// mirv_pov related
+		//
+		AFXADDR_SET(csgo_client_C_CSPlayer_EyeAngles_vtable_index, 170);
+		AFXADDR_SET(csgo_client_C_CS_Player_GetFOV_vtable_index, 332);
+		AFXADDR_SET(csgo_client_C_CSPlayer_UpdateOnRemove_vtable_index, 127);
+		AFXADDR_SET(csgo_client_CPlayerResource_GetPing_vtable_index, 10);
 
+		// mirv_pov related
+		//
+		// If this changes MYcsgo_DamageIndicator_MessageFunc asm needs adjustments.
 		{
 			DWORD addr = 0;
 
@@ -2033,7 +2081,245 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 			AFXADDR_SET(csgo_client_C_TEPlayerAnimEvent_PostDataUpdate_NewModelAnims_JNZ, addr);
 		}
 
+		// csgo_client_CanSeeSpectatorOnlyTools
+		//
+		{
+			ImageSectionsReader sections((HMODULE)clientDll);
+			if (!sections.Eof())
+			{
+				MemRange textRange = sections.GetMemRange();
+				sections.Next(); // skip .text
+				if (!sections.Eof())
+				{
+					MemRange firstDataRange = sections.GetMemRange();
+
+					MemRange result = FindCString(sections.GetMemRange(), "Enable to force the server to show 5v5 scoreboards and allows spectators to see characters through walls.");
+					if (!result.IsEmpty())
+					{
+						DWORD tmpAddr = result.Start;
+
+						result = FindBytes(textRange, (char const *)&tmpAddr, sizeof(tmpAddr));
+						if (!result.IsEmpty())
+						{
+							result = FindPatternString(MemRange(result.Start - 0x08, result.Start - 0x08 + 7).And(textRange), "B9 ?? ?? ?? ?? 6A 00");
+							if (!result.IsEmpty())
+							{
+								DWORD csgo_client_sv_competitive_official_5v5_cvar = *(DWORD *)(result.Start + 1);
+								{
+									const char * fmt = "E8 ?? ?? ?? ?? 84 C0 74 31 A1 %02x %02x %02x %02x B9 %02x %02x %02x %02x FF 50 34";
+									int sz = snprintf(nullptr, 0, fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+									std::vector<char> buf(sz + 1);
+									snprintf(&buf[0], buf.size(), fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+
+									result = FindPatternString(MemRange(result.End,textRange.End), &buf[0]);
+									if (!result.IsEmpty()) {
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_1_OFS, result.Start);
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_1_LEN, (sz+1) / 3);
+									}
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));
+								}
+								if(!result.IsEmpty())
+								{
+									const char * fmt = "E8 ?? ?? ?? ?? 84 C0 0F 84 ?? ?? ?? ?? A1 %02x %02x %02x %02x B9 %02x %02x %02x %02x 8B 40 34 FF D0";
+									int sz = snprintf(nullptr, 0, fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+									std::vector<char> buf(sz + 1);
+									snprintf(&buf[0], buf.size(), fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+
+									result = FindPatternString(MemRange(result.End,textRange.End), &buf[0]);
+									if (!result.IsEmpty()) {
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_2_OFS, result.Start);
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_2_LEN, (sz+1) / 3);
+									}
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));
+								}
+								if(!result.IsEmpty())
+								{
+									const char * fmt = "E8 ?? ?? ?? ?? 84 C0 0F 84 ?? ?? ?? ?? A1 %02x %02x %02x %02x B9 %02x %02x %02x %02x 8B 40 34 FF D0";
+									int sz = snprintf(nullptr, 0, fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+									std::vector<char> buf(sz + 1);
+									snprintf(&buf[0], buf.size(), fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+
+									result = FindPatternString(MemRange(result.End,textRange.End), &buf[0]);
+									if (!result.IsEmpty()) {
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_3_OFS, result.Start);
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_3_LEN, (sz+1) / 3);
+									}
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));
+								}
+								if(!result.IsEmpty())
+								{
+									const char * fmt = "E8 ?? ?? ?? ?? 84 C0 74 5D A1 %02x %02x %02x %02x B9 %02x %02x %02x %02x 8B 40 34 FF D0";
+									int sz = snprintf(nullptr, 0, fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+									std::vector<char> buf(sz + 1);
+									snprintf(&buf[0], buf.size(), fmt,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 0) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 8) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 16) &0xff,
+										(csgo_client_sv_competitive_official_5v5_cvar >> 24) &0xff
+									);
+
+									result = FindPatternString(MemRange(result.End,textRange.End), &buf[0]);
+									if (!result.IsEmpty()) {
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_4_OFS, result.Start);
+										AFXADDR_SET(csgo_client_CanSeeSpectatorOnlyTools_4_LEN, (sz+1) / 3);
+									}
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));
+								}
+							}
+							else ErrorBox(MkErrStr(__FILE__, __LINE__));
+						}
+						else ErrorBox(MkErrStr(__FILE__, __LINE__));
+					}
+					else ErrorBox(MkErrStr(__FILE__, __LINE__));
+				}
+				else ErrorBox(MkErrStr(__FILE__, __LINE__));
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));
+		}		
+
+		// csgo_client_CCSGO_MapOverview__CanShowOverview
+		// References "#Hint_Survival_MapOverview"
+		{
+			DWORD addr = 0;
+
+			ImageSectionsReader sections((HMODULE)clientDll);
+			if (!sections.Eof())
+			{
+				MemRange textRange = sections.GetMemRange();
+
+				MemRange result = FindPatternString(textRange, "55 8B EC 83 E4 F8 8B 4D 04 83 EC 28 56 57 e8 ?? ?? ?? ?? 8B 35 ?? ?? ?? ?? 85 F6 74 38 8B 06 8B CE FF 90 98 04 00 00");
+
+				if (!result.IsEmpty())
+					addr = result.Start;
+				else
+					ErrorBox(MkErrStr(__FILE__, __LINE__));
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));
+
+			AFXADDR_SET(csgo_client_CCSGO_MapOverview_CanShowOverview, addr);
+		}
+
+		// csgo_client_CCSGO_Scoreboard_OpenScoreboard_jz_addr
+		// References "armrace-scoreboard"
+		{
+			DWORD addr = 0;
+
+			ImageSectionsReader sections((HMODULE)clientDll);
+			if (!sections.Eof())
+			{
+				MemRange textRange = sections.GetMemRange();
+
+				MemRange result = FindPatternString(textRange, "55 8B EC 83 E4 F8 83 EC 08 56 8B F1 8B 0D ?? ?? ?? ?? 57 8B 01 8B 80 48 01 00 00 FF D0 84 C0 74 0D 80 3D ?? ?? ?? ?? 00 0F 84 AE 01 00 00");
+
+				if (!result.IsEmpty())
+					addr = result.Start + 42;
+				else
+					ErrorBox(MkErrStr(__FILE__, __LINE__));
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));
+
+			AFXADDR_SET(csgo_client_CCSGO_Scoreboard_OpenScoreboard_jz_addr, addr);
+		}	
+
+		{
+			DWORD addr = 0;
+			DWORD tmpAddr = FindClassVtable((HMODULE)clientDll, ".?AVCHLClient@@", 0, 0x0);
+			if (tmpAddr) {
+				tmpAddr = ((DWORD *)tmpAddr)[37]; // ::FrameStageNotify
+				ImageSectionsReader sections((HMODULE)clientDll);
+				if (!sections.Eof())
+				{
+					MemRange textRange = sections.GetMemRange();
+					MemRange result = FindPatternString(MemRange(tmpAddr+0x13, tmpAddr+0x13+5), "A2 ?? ?? ?? ??");
+					if(!result.IsEmpty()) {
+						AFXADDR_SET(csgo_client_g_bEngineIsHLTV, *(DWORD *)(result.Start+1));
+					}
+					else ErrorBox(MkErrStr(__FILE__, __LINE__));
+				}
+				else ErrorBox(MkErrStr(__FILE__, __LINE__));
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));
+		}
+
+		{
+			DWORD tmpAddr = FindClassVtable((HMODULE)clientDll, ".?AVCCSGO_MapOverview@@", 0, 0x14);
+			if (tmpAddr) {
+				AFXADDR_SET(csgo_client_CCSGO_MapOverview_FireGameEvent, ((DWORD *)tmpAddr)[1]);
+				AFXADDR_SET(csgo_client_CCSGO_MapOverview_ProcessInput, ((DWORD *)tmpAddr)[9]);
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+		}
+
 		// csgo_client_AdjustInterpolationAmount
+		// mirv_pov related
+		// My_csgo_client_AdjustInterpolationAmount asm needs update if this changes
 		//
 		// This static function is the first function taht references the "cl_interp_npcs" cvar.
 		{
@@ -2059,6 +2345,13 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 		// csgo_C_BaseEntity_ofs_m_bPredictable // Last checked: 2022-10-24
 		// referenced by Second function that uses cl_interp_all cvar (meaning CheckInitPredictable).
 		//AFXADDR_SET(csgo_C_BaseEntity_ofs_m_bPredictable, 0x2ee);
+
+		// Deathnotice releated:
+		//
+		AFXADDR_SET(csgo_client_C_Team_Get_ClanName_vtable_index, 188);
+		AFXADDR_SET(csgo_client_C_Team_Get_FlagImageString_vtable_index, 189);
+		AFXADDR_SET(csgo_client_C_Team_Get_LogoImageString_vtable_index, 190);
+		AFXADDR_SET(csgo_client_CPlayerResource_GetPlayerName_vtable_index, 8);
 	}
 	else
 	{
@@ -2348,6 +2641,7 @@ void Addresses_InitMaterialsystemDll(AfxAddr materialsystemDll, SourceSdkVer sou
 	AFXADDR_SET(csgo_materialsystem_CMaterialSystem_ForceSingleThreaded, 0);
 	if (sourceSdkVer == SourceSdkVer_CSGO) {
 
+		AFXADDR_SET(csgo_materialsystem_Material_InterlockedDecrement_vtable_index, 13);
 
 		// csgo_materialsystem_CMaterialSystem_ForceSingleThreaded:
 		//

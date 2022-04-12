@@ -238,6 +238,9 @@
     <Filter Include="AfxHookSource\jsonrpc">
       <UniqueIdentifier>{043e1b35-53c5-483f-8f4e-d5e8f31b32c5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="AfxHookSource\csgo\hooks\client">
+      <UniqueIdentifier>{d124cf87-e4cf-408a-a0cd-ede3bcce8ac3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\shared\bvhexport.cpp">
@@ -522,8 +525,13 @@
     <ClCompile Include="csgo\hooks\engine\cmd.cpp">
       <Filter>AfxHookSource\csgo\hooks\engine</Filter>
     </ClCompile>
+<<<<<<< HEAD
     <ClCompile Include="jsonrpc\main.cpp">
       <Filter>AfxHookSource\jsonrpc</Filter>
+=======
+    <ClCompile Include="csgo\hooks\client\csgo_spectatortools.cpp">
+      <Filter>AfxHookSource\csgo\hooks\client</Filter>
+>>>>>>> main
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

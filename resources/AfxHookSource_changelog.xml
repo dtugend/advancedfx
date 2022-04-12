@@ -6,6 +6,27 @@
 
 <release>
 <name>AfxHookSource</name>
+<version>1.106.1</version>
+<time>2022-03-14T09:03Z</time>
+<changes>
+<change type="updated">For mirv_force_spectatortools 1 (should be enabled before loading demo), the drawmapoview CS:GO command will now also display enemies; The old behaviour can be restored with mirv_cfg mirvForceSpectatorToolsMapOverviewShowAll 0, however toggling this during the demo can have unwanted side effects (untested).</change>
+<change type="fixed">Fixed bug introduced in last version in mirv_deathmsg.</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.106.0</version>
+<time>2022-03-14T05:48Z</time>
+<changes>
+<change type="added">Added mirv_force_spectatortools 0|1 - "Enable / Disable allowing spectator tools (e.g. makes spec_show_xray 1 work) and also enables scoreboard and drawoverviewmap in POV demos (most useful in fake mirv_pov POV demos).</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
 <version>1.105.0</version>
 <time>2022-02-01T11:00Z</time>
 <changes>
