@@ -39,6 +39,11 @@ public:
 		return true;
 	}
 
+	virtual int GetAgrVersion() override {
+		return 6;
+	}
+
+
 	virtual void StartRecording(wchar_t const * fileName);
 
 	virtual void EndRecording();
@@ -68,8 +73,6 @@ private:
 
 	SOURCESDK::CSGO::IClientTools * m_ClientTools;
 	std::map<SOURCESDK::CSGO::HTOOLHANDLE, bool> m_TrackedHandles;
-
-	void Write(SOURCESDK::CSGO::CBoneList const * value);
 
 	void OnPostToolMessageCsgo(SOURCESDK::CSGO::HTOOLHANDLE hEntity, SOURCESDK::CSGO::KeyValues * msg);
 

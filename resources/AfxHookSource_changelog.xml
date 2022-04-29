@@ -6,6 +6,61 @@
 
 <release>
 <name>AfxHookSource</name>
+<version>1.109.2</version>
+<time>2022-04-23T16:30Z</time>
+<changes>
+<change type="fixed">Fixed some minor typos, apart from that same as last release (thanks Dec).</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.109.1</version>
+<time>2022-04-21T18:40Z</time>
+<changes>
+<change type="updated">Vastly improved the HLAE mirv_streams entity detection capabilities. This is also reflected in the updated afx/wh.cfg, since it now no more needs wonky tampering with disabling fastpath.</change>
+</changes>
+<comments>
+IMPORTANT: Do not forget to update your own configs (e.g. wh related cfgs) that might still use wonky fastpath related settings, this is not required anymore for improved entity detection.<br />
+You should REMOVE any of these from your configs: cl_modelfastpath 0; cl_tlucfastpath 0; cl_brushfastpath 0
+</comments>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.107.2</version>
+<time>2022-04-20T14:42Z</time>
+<changes>
+<change type="fixed">Fixed visibility flag for CSS and CSSv34 AGR v6, thanks @filiperino.</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.107.1</version>
+<time>2022-04-17T18:16Z</time>
+<changes>
+<change type="fixed">Fixed CS:GO AGR v6 not working properly when neither player camera nor view model recording was enabled.</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.107.0</version>
+<time>2022-04-15T13:44Z</time>
+<changes>
+<change type="updated">Updated AGR to v6 for CS:GO, TF2, CSSv34.</change>
+<change type="added">Added AGR v6 support to official Steam CSS.</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
 <version>1.106.1</version>
 <time>2022-03-14T09:03Z</time>
 <changes>

@@ -125,6 +125,12 @@ AFXADDR_DEF(csgo_client_CCSGO_Scoreboard_OpenScoreboard_jz_addr)
 AFXADDR_DEF(csgo_client_CCSGO_MapOverview_FireGameEvent)
 AFXADDR_DEF(csgo_client_CCSGO_MapOverview_ProcessInput)
 AFXADDR_DEF(csgo_client_g_bEngineIsHLTV)
+AFXADDR_DEF(csgo_client_C_BaseAnimating_RecordBones)
+AFXADDR_DEF(css_client_C_BaseAnimating_RecordBones)
+AFXADDR_DEF(cssv34_client_C_BaseAnimating_RecordBones)
+AFXADDR_DEF(cssv34_client_C_BaseAnimating_m_BoneAccessor_m_pBones)
+AFXADDR_DEF(tf2_client_C_BaseAnimating_RecordBones)
+AFXADDR_DEF(csgo_client_CModelRenderSystem_SetupBones)
 
 void ErrorBox(char const * messageText);
 
@@ -664,7 +670,7 @@ void Addresses_InitEngineDll(AfxAddr engineDll, SourceSdkVer sourceSdkVer)
 			{
 				AFXADDR_SET(csgo_engine_Cmd_ExecuteCommand, 0x0);
 			}
-		}
+		}	
 	}
 	else
 	{
@@ -2352,6 +2358,27 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 		AFXADDR_SET(csgo_client_C_Team_Get_FlagImageString_vtable_index, 189);
 		AFXADDR_SET(csgo_client_C_Team_Get_LogoImageString_vtable_index, 190);
 		AFXADDR_SET(csgo_client_CPlayerResource_GetPlayerName_vtable_index, 8);
+
+		// csgo_client_CModelRenderSystem_SetupBones
+		//
+		// This is referenced before
+		//   cmp     eax, 2 
+		// in two functions that reference "Fast Path Model Rendering" string.
+		{
+			ImageSectionsReader sections((HMODULE)clientDll);
+			if (!sections.Eof())
+			{
+				MemRange textRange = sections.GetMemRange();
+
+				MemRange result = FindPatternString(textRange, "55 8B EC 83 E4 F0 B8 38 30 00 00 E8 ?? ?? ?? ?? 83 7D 08 00");
+
+				if (!result.IsEmpty())
+					AFXADDR_SET(csgo_client_CModelRenderSystem_SetupBones, result.Start);
+				else
+					ErrorBox(MkErrStr(__FILE__, __LINE__));
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));
+		}			
 	}
 	else
 	{
@@ -2416,6 +2443,71 @@ void Addresses_InitClientDll(AfxAddr clientDll, SourceSdkVer sourceSdkVer)
 	AFXADDR_SET(cstrike_gpGlobals_OFS_absoluteframetime, 2*4);
 	AFXADDR_SET(cstrike_gpGlobals_OFS_interpolation_amount, 8*4);
 	AFXADDR_SET(cstrike_gpGlobals_OFS_interval_per_tick, 7*4);
+
+	// C_BaseAnimating_RecordBones
+	{
+		ImageSectionsReader sections((HMODULE)clientDll);
+		if (!sections.Eof())
+		{
+			MemRange textRange = sections.GetMemRange();
+			sections.Next(); // skip .text
+			if (!sections.Eof())
+			{
+				{
+					MemRange result = FindCString(sections.GetMemRange(), "C_BaseAnimating::RecordBones");
+					if (!result.IsEmpty())
+					{
+						DWORD strAddr = result.Start;
+						result = FindBytes(textRange, (char const *)&strAddr, sizeof(strAddr));
+						if(!result.IsEmpty()) {
+							DWORD refStrAddr = result.Start;
+
+							switch(sourceSdkVer) {
+							case SourceSdkVer_CSGO:
+								{
+									MemRange result = FindPatternString(textRange.And(MemRange(refStrAddr - 0x4e, refStrAddr -0x4e + 3)), "55 8B EC");
+									if(!result.IsEmpty())
+										AFXADDR_SET(csgo_client_C_BaseAnimating_RecordBones, result.Start);
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+								}
+								break;
+							case SourceSdkVer_CSS:
+								{
+									MemRange result = FindPatternString(textRange.And(MemRange(refStrAddr - 0x3a, refStrAddr -0x3a + 3)), "55 8B EC");
+									if(!result.IsEmpty())
+										AFXADDR_SET(css_client_C_BaseAnimating_RecordBones, result.Start);
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+								}
+								break;
+							case SourceSdkVer_CSSV34:
+								{
+									MemRange result = FindPatternString(textRange.And(MemRange(refStrAddr - 0x1e, refStrAddr -0x1e + 6)), "81 EC 9C 00 00 00");
+									if(!result.IsEmpty()) {
+										AFXADDR_SET(cssv34_client_C_BaseAnimating_RecordBones, result.Start);
+										AFXADDR_SET(cssv34_client_C_BaseAnimating_m_BoneAccessor_m_pBones, 0x4A8);
+									}
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+								}
+								break;
+							case SourceSdkVer_TF2:
+								{
+									MemRange result = FindPatternString(textRange.And(MemRange(refStrAddr - 0x3b, refStrAddr -0x3b + 3)), "55 8B EC");
+									if(!result.IsEmpty())
+										AFXADDR_SET(tf2_client_C_BaseAnimating_RecordBones, result.Start);
+									else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+								}
+								break;
+							}	
+						}					
+						else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+					}
+					else ErrorBox(MkErrStr(__FILE__, __LINE__));
+				}
+			}
+			else ErrorBox(MkErrStr(__FILE__, __LINE__));
+		}
+		else ErrorBox(MkErrStr(__FILE__, __LINE__));	
+	}
 }
 
 /*

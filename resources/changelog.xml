@@ -6,6 +6,67 @@
 
 <release>
 <name>HLAE</name>
+<version>2.130.2</version>
+<time>2022-04-23T16:30Z</time>
+<changes>
+<change type="updated">Included AfxHookSource 1.109.2 (2022-04-23T16:30Z).</change>
+</changes>
+<comments>Since apart from minor typo fixes this release is functionally the same as the last one, people on 2.130.1 won't be notified of the update.</comments>
+</release>
+
+
+<release>
+<name>HLAE</name>
+<version>2.130.1</version>
+<time>2022-04-21T18:40Z</time>
+<changes>
+<change type="updated">Included AfxHookSource 1.109.1 (2022-04-21T18:40Z).</change>
+</changes>
+</release>
+
+
+<release>
+<name>HLAE</name>
+<version>2.128.3</version>
+<time>2022-04-20T14:42Z</time>
+<changes>
+<change type="updated">Included AfxHookSource 1.107.2 (2022-04-20T14:42Z).</change>
+</changes>
+</release>
+
+
+<release>
+<name>HLAE</name>
+<version>2.128.2</version>
+<time>2022-04-17T18:16Z</time>
+<changes>
+<change type="updated">Included AfxHookSource 1.107.1 (2022-04-17T18:16Z).</change>
+</changes>
+</release>
+
+
+<release>
+<name>HLAE</name>
+<version>2.128.1</version>
+<time>2022-04-15T13:44Z</time>
+<changes>
+<change type="updated">Included AfxHookSource 1.107.0 (2022-04-15T13:44Z).</change>
+</changes>
+</release>
+
+
+<release>
+<name>HLAE</name>
+<version>2.127.2</version>
+<time>2022-04-12T20:47Z</time>
+<changes>
+<change type="updated">Updated build and HLAE_Setup.exe to .NET 4.6.2.</change>
+</changes>
+</release>
+
+
+<release>
+<name>HLAE</name>
 <version>2.127.1</version>
 <time>2022-03-14T09:03Z</time>
 <changes>
