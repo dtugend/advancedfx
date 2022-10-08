@@ -33,3 +33,9 @@
 [submodule "deps/release/injector"]
 	path = deps/release/injector
 	url = https://github.com/advancedfx/injector.git
+[submodule "deps/release/json-rpc-cxx"]
+	path = deps/release/json-rpc-cxx
+	url = https://github.com/advancedfx/json-rpc-cxx
+[submodule "deps/release/json"]
+	path = deps/release/json
+	url = https://github.com/advancedfx/json
