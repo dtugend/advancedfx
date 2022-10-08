@@ -1,5 +1,6 @@
 #ifndef ADVANCEDFX_LIBRARY_H
 #define ADVANCEDFX_LIBRARY_H
+
 #include "AdvancedfxTypes.h"
 
 #if defined _WIN32 || defined __CYGWIN__
@@ -23,13 +24,7 @@
 #endif
 #endif
 
-
-
-//
-// Factory
-
-
-#define ADVANCEDFX_LIBRARY_FN_IDENTIFIER AdvancedfxModuleInit
+#define ADVANCEDFX_LIBRARY_CALL_FN_IDENTIFIER AdvancedfxLibraryCall
 
 #ifdef __cplusplus
 #define ADVANCEDFX_EXTERNC extern "C"
@@ -37,8 +32,20 @@
 #define ADVANCEDFX_EXTERNC
 #endif
 
-#define ADVANCEDFX_FACTORY_FN ADVANCEDFX_EXTERNC void ADVANCEDFX_LIBRARY_FN_IDENTIFIER (struct AdvancedfxRegistry * registry)
+/**
+ * @remark AdvancedfxLibraryCall("setLocaleName", AdvancedfxCString_t) -> ADVANCEDFX_NULLPTR
+ * @remark AdvancedfxLibraryCall("getPlugins", ADVANCEDFX_NULLPTR) -> ADVANCEDFX_NULLPTR | struct AdvancedfxGetPlugins_s*
+ */ \
+#define ADVANCEDFX_LIBRARY_INIT_FN ADVANCEDFX_EXTERNC void * ADVANCEDFX_LIBRARY_CALL_FN_IDENTIFIER (const char * context, void * args)
 
+struct AdvancedfxInitLibraryArgs_s {
+    const char * (*GetHostLocaleName)(void);
+};
 
+struct AdvancedfxInitLibraryResult_s {
+    void (*AddRef)(void);
+    void (*Release)(void);
+
+};
 
 #endif
