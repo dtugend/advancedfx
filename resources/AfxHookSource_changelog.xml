@@ -4,6 +4,35 @@
 <changelog>
 
 
+<release>
+<name>AfxHookSource</name>
+<version>1.116.2</version>
+<time>2022-10-26T16:28Z</time>
+<changes>
+<change type="fixed">Fixed default mirv_streams depth recordings having broken skybox depth.</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.116.1</version>
+<time>2022-10-22T14:46Z</time>
+<changes>
+<change type="fixed">Fixed mirv_cvar_unhide_all crashing.</change>
+</changes>
+</release>
+
+
+<release>
+<name>AfxHookSource</name>
+<version>1.116.0</version>
+<time>2022-10-22T14:01Z</time>
+<changes>
+<change type="fixed">Adjusted to latest CS:GO update.</change>
+</changes>
+</release>
+
 
 <release>
 <name>AfxHookSource</name>
