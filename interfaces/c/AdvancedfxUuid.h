@@ -3,7 +3,7 @@
 
 #include "AdvancedfxTypes.h"
 
-#define ADVANCEDFX_UUID_FROM_VARIANT2(time_low,time_mid,time_hi_and_version,clock_seq_hi_and_res__clock_seq_low,node_uc5,node_uc4,node_uc3,node_uc2,node_uc1,node_uc0) (AdvancedfxInt32)time_low, (AdvancedfxInt32)time_mid|(AdvancedfxInt32)time_hi_and_version<<16, ((AdvancedfxInt32)clock_seq_hi_and_res__clock_seq_low&0x00ff)<<8|((AdvancedfxInt32)clock_seq_hi_and_res__clock_seq_low&0xff00)>>8|(AdvancedfxInt32)node_uc4<<24|(AdvancedfxInt32)node_uc5<<16, (AdvancedfxInt32)node_uc0<<24|(AdvancedfxInt32)node_uc1<<16|(AdvancedfxInt32)node_uc2<<8|(AdvancedfxInt32)node_uc3
+#define ADVANCEDFX_UUID_FROM_VARIANT2(time_low,time_mid,time_hi_and_version,clock_seq_hi_and_res__clock_seq_low,node_uc5,node_uc4,node_uc3,node_uc2,node_uc1,node_uc0) (AdvancedfxUInt32_t)time_low, (AdvancedfxUInt32_t)time_mid|(AdvancedfxUInt32_t)time_hi_and_version<<16, ((AdvancedfxUInt32_t)clock_seq_hi_and_res__clock_seq_low&0x00ff)<<8|((AdvancedfxUInt32_t)clock_seq_hi_and_res__clock_seq_low&0xff00)>>8|(AdvancedfxUInt32_t)node_uc4<<24|(AdvancedfxUInt32_t)node_uc5<<16, (AdvancedfxUInt32_t)node_uc0<<24|(AdvancedfxUInt32_t)node_uc1<<16|(AdvancedfxUInt32_t)node_uc2<<8|(AdvancedfxUInt32_t)node_uc3
 
 #define ADVANCEDFX_UUID_BYTE_0(ul0,ul1,ul2,ul3) ((AdvancedfxUInt8)((ul0 & 0xff000000) >> 24))
 #define ADVANCEDFX_UUID_BYTE_1(ul0,ul1,ul2,ul3) ((AdvancedfxUInt8)((ul0 & 0x00ff0000) >> 16))
