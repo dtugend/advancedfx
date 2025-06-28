@@ -130,6 +130,8 @@ FetchContent_MakeAvailable(Corrosion)
 #
 
 if(CMAKE_GENERATOR_PLATFORM STREQUAL "Win32")
+    add_subdirectory("afx-rpc-generator")
+
     add_subdirectory("deps/release/zlib")
     add_subdirectory("deps/release/protobuf")
     add_subdirectory("deps/release/openexr")
@@ -139,10 +141,13 @@ if(CMAKE_GENERATOR_PLATFORM STREQUAL "Win32")
     add_subdirectory("ShaderBuilder")
     add_subdirectory("AfxHookGoldSrc")
     add_subdirectory("AfxHookSource")
+
+    add_subdirectory("afx-core")
+
     add_subdirectory("hlae")
 
     add_custom_target(advancedfx ALL
-	    DEPENDS hlae
+	    DEPENDS hlae afx-core
     )
 elseif(CMAKE_GENERATOR_PLATFORM STREQUAL "x64")
     add_subdirectory("deps/release/zlib")

@@ -1,0 +1,223 @@
+{
+    "openrpc": "1.2.1",
+    "info": {
+        "version": "0.0.0",
+        "title": "afx.core"
+    },
+    "methods": [
+        {
+            "name": "rpc.discover",
+            "description": "Returns an OpenRPC schema as a description of this service",
+            "params": [],
+            "result": {
+              "name": "OpenRPC Schema",
+              "schema": true
+            }
+        },
+        {
+            "name": "afx.core.authenticate",
+            "description": "Authenticate to this endpoint.",
+            "params": [
+                {
+                    "name": "secret",
+                    "required": true,
+                    "description": "The secret.",
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/Null"
+            }
+        },
+        {
+            "name": "afx.core.get_client_count",
+            "description": "Get the number of currrent client connections.",
+            "params": [],
+            "result": {
+                "name": "count",
+                "required": true,
+                "description": "Number of current client connections.",
+                "schema": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        {
+            "name": "afx.core.get_version",
+            "description": "Gets the interface version.",
+            "params": [],
+            "result": {
+                "name": "version",
+                "required": true,
+                "description": "SemVer 2.0.0 string.",
+                "schema": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+                }
+            }
+        },
+        {
+            "name": "afx.core.add_endpoint",
+            "description": "Add an endpoint.",
+            "params": [
+                {
+                    "name": "endpoint",
+                    "required": true,
+                    "description": "The endpoint.",
+                    "schema": {
+                        "$ref": "#/components/schemas/Endpoint"
+                    }
+                }
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/Null"
+            }
+        },
+        {
+            "name": "afx.core.delete_endpoint",
+            "description": "Delete an endpoint",
+            "params": [
+                {
+                    "name": "endpoint",
+                    "required": true,
+                    "description": "The endpoint.",
+                    "schema": {
+                        "$ref": "#/components/schemas/Endpoint"
+                    }
+                }
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/Null"
+            }
+        },
+        {
+            "name": "afx.core.get_endpoints",
+            "description": "Get information about the endpoints",
+            "params": [
+                {
+                    "name": "name",
+                    "required": false,
+                    "description": "The name of endpoint (e.g. \"afx.core\").",
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "result": {
+                "name": "endpoints",
+                "description": "Endpoint list",
+                "required": true,
+                "schema": {
+                    "$ref": "#/components/schemas/EndpointList"
+                }
+            }
+        },
+        {
+            "name": "afx.core.subscribe_add_endpoint",
+            "description": "Subscribe to add endpoint event.",
+            "params": [
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/PubSubId"
+            }
+        },
+        {
+            "name": "afx.core.unsubscribe_add_endpoint",
+            "description": "Unsubscribe from add endpoint event.",
+            "params": [
+                {
+                  "$ref": "#/components/contentDescriptors/PubSubId"
+                }
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/PubUnsubSuccess"
+            }
+        },
+        {
+            "name": "afx.core.subscribe_delete_endpoint",
+            "description": "Subscribe to delete endpoint event.",
+            "params": [
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/PubSubId"
+            }
+        },
+        {
+            "name": "afx.core.unsubscribe_delete_endpoint",
+            "description": "Unsubscribe from delete endpoint event.",
+            "params": [
+                {
+                  "$ref": "#/components/contentDescriptors/PubSubId"
+                }
+            ],
+            "result": {
+                "$ref": "#/components/contentDescriptors/PubUnsubSuccess"
+            }
+        }
+    ],
+    "components": {
+        "contentDescriptors": {
+            "Null": {
+                "name": "null",
+                "required": true,
+                "schema": {
+                    "type": "null"
+                }
+            },
+            "PubSubId": {
+                "name": "pubSubId",
+                "required": true,
+                "description": "The subscription id (https://openethereum.github.io/JSONRPC-eth_pubsub-module)",
+                "schema": {
+                    "$ref": "#/components/schemas/PubSubId"
+                }
+            },
+            "PubUnsubSuccess": {
+                "name": "pubUnsubSucccess",
+                "required": true,
+                "description": "whether the call was successful",
+                "schema": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "schemas": {
+            "PubSubId": {
+                "type": "string"
+            },
+            "Endpoint": {   
+                "type": "object",
+                "required": [
+                    "id"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "ID of the endpoint. Example: \"afx.core\".",
+                        "type": "string"
+                    },
+                    "transport": {
+                        "description": "The transport used. Example: \"ws\".",
+                        "type": "string"
+                    },
+                    "meta": {
+                        "description": "Meta data required to connect. Example: \"ws://127.0.0.1:1234\".",
+                        "type": "string"
+                    },
+                    "secret": {
+                        "description": "The secret required to authenticate. Example: \"012345670123456789abcdef012345670123456789abcdef0123456701234567\".",
+                        "type": "string"
+                    }
+                }
+            },
+            "EndpointList": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/Endpoint"
+                }
+            }
+        }
+    }
+}

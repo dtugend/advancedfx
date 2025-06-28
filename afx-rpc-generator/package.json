@@ -1,0 +1,14 @@
+{
+  "name": "afx-rpc-generator",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "deepmerge": "4.3.1",
+    "@open-rpc/generator": "2.0.1"
+  }
+}

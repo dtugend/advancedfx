@@ -1,0 +1,83 @@
+{
+    "methods": [
+        {
+            "name": "afx.core.injector.win32.inject",
+            "description": "Inject a library into a process.",
+            "params": [
+                {
+                    "name": "processId",
+                    "required": true,
+                    "description": "The process id.",
+                    "schema": {
+                        "type": "integer"
+                    }
+                },
+                {
+                    "name": "dllFilePath",
+                    "required": true,
+                    "description": "The DLL file path.",
+                    "schema": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "name": "baseDirectory",
+                    "required": false,
+                    "description": "The working directory to use. If omitted the directory of the DLL.",
+                    "schema": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "name": "waitMs",
+                    "required": false,
+                    "description": "The number of milliseconds to wait before giving up, use -1 for infinite.",
+                    "schema": {
+                        "type": "integer"
+                    }
+                }
+            ],
+            "result": {
+                "name": "injectResult",
+                "schema":  {   
+                    "type": "object",
+                    "required": [
+                        "success"
+                    ],
+                    "properties": {
+                        "success": {
+                            "description": "If injection was successful.",
+                            "type": "boolean"
+                        },
+                        "error": {
+                            "description": "Error description.",
+                            "type": "object",
+                            "properties": {
+                                "line": {
+                                    "type": "integer"
+                                },
+                                "group": {
+                                    "type": "integer"
+                                },
+                                "message": {
+                                    "type": "string"
+                                },
+                                "detail": {
+                                    "type": "object",
+                                    "properties": {
+                                        "lastWinApiError": {
+                                            "type": "integer"
+                                        },
+                                        "threadExitCode": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
