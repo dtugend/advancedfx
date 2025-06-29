@@ -1,5 +1,3 @@
-const modules = require("../interfaces/openrpc/modules.json");
-
 const fs = require('fs');
 const path = require('path');
 const merge = require('deepmerge');

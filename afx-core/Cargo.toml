@@ -1,3 +1,5 @@
+[workspace]
+
 [package]
 name = "afx-core"
 version = "0.1.0"
@@ -19,6 +21,8 @@ serde_json = "1.0.140"
 tray-icon = "0.21.0"
 tray-item = "0.10.0"
 winapi = { version = "0.3.9", features = ["wincon","winuser"] }
+jsonrpc-client-core = "0.5.0"
+derive_builder = "0.20.2"
 
 [build-dependencies]
 embed-resource = "3.0.4"

@@ -19,12 +19,16 @@ use serde::{Serialize,Deserialize};
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Start and wait for main enpdoint fork if there's none yet (recommended).
-    #[arg(action=clap::ArgAction::Set)]
+    #[arg(exclusive = true, long, action=clap::ArgAction::SetTrue)]
     auto_create: bool,
 
     /// This is a main fork (internal).
-    #[arg(long,action=clap::ArgAction::SetTrue)]
-    main_fork: bool
+    #[arg(exclusive = true, long, action=clap::ArgAction::SetTrue)]
+    main_fork: bool,
+
+    /// Prints the OpenRPC schema.
+    #[arg(exclusive = true, long, default_value_t=false)]
+    print_openrpc_schema: bool
 }
 
 
@@ -225,6 +229,8 @@ fn main_do(cli: Cli) -> Result<Option<AfxCoreResult>,Box<dyn Error>> {
     Ok(None)
 }
 
+const OPENRPC_JSON : &str =  include_str!(concat!(env!("OUT_DIR"), "/afx-core-rpc.json"));
+
 fn main() -> ExitCode {
     let mut exit_code = ExitCode::FAILURE;
 
@@ -232,31 +238,35 @@ fn main() -> ExitCode {
 
     match Cli::try_parse() {
         Ok(cli) => {
-            let main_fork: bool = cli.main_fork;
-            match main_do(cli) {
-                Ok(eo) => {
-                    if let Some(e) = eo {
-                        let json_result = serde_json::to_string(&e).unwrap();
-                        println!("{}", json_result);
-                    } else if !main_fork {
-                        // Dead code path.
-                        let json_result = serde_json::to_string(&AfxCoreResult::Error{message: "Endpoint not found.".to_string()}).unwrap();
-                        println!("{}", json_result);
+            if cli.print_openrpc_schema {
+                println!("{}", OPENRPC_JSON);
+            } else {     
+                let main_fork: bool = cli.main_fork;
+                match main_do(cli) {
+                    Ok(eo) => {
+                        if let Some(e) = eo {
+                            let json_result = serde_json::to_string(&e).unwrap();
+                            println!("{}", json_result);
+                        } else if !main_fork {
+                            // Dead code path.
+                            let json_result = serde_json::to_string(&AfxCoreResult::Error{message: "Endpoint not found.".to_string()}).unwrap();
+                            println!("{}", json_result);
+                        }
+                        exit_code = ExitCode::SUCCESS;
                     }
-                    exit_code = ExitCode::SUCCESS;
-                }
-                Err(e) => {
-                    if main_fork {
-                        eprintln!("{}", e);
-                    } else {
-                        let json_result = serde_json::to_string(&AfxCoreResult::Error{message: e.to_string()}).unwrap();
-                        println!("{}", json_result);
+                    Err(e) => {
+                        if main_fork {
+                            eprintln!("{}", e);
+                        } else {
+                            let json_result = serde_json::to_string(&AfxCoreResult::Error{message: e.to_string()}).unwrap();
+                            println!("{}", json_result);
+                        }
                     }
-                }
-            };
+                };
+            }
         }
         Err(err) => {
-            print!("\n{}", err);            
+            print!("\n{}", err);
         }
     }
 
