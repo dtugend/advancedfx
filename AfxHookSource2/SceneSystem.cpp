@@ -16,6 +16,7 @@
 #include <shared_mutex>
 #include <unordered_map>
 #include <map>
+#include <set>
 
 typedef void* (__fastcall * FindMaterial_t)(void* This, CMaterial2*** out, const char* materialName);
 FindMaterial_t org_FindMaterial = nullptr;
@@ -306,6 +307,7 @@ SceneObjectDrawPolicy g_BaseSceneObjectsPolicy = SceneObjectDrawPolicy::Draw;
 SceneObjectDrawPolicy g_AnimatableSceneObjectsPolicy = SceneObjectDrawPolicy::Draw;
 SceneObjectDrawPolicy g_AggregateSceneObjectsPolicy = SceneObjectDrawPolicy::Draw;
 SceneObjectDrawPolicy g_SmokeVolumeObjectsPolicy = SceneObjectDrawPolicy::Draw;
+SceneObjectDrawPolicy g_OverlaysPolicy = SceneObjectDrawPolicy::Draw;
 int g_iSceneFilterDebug = 0;
 
 enum class SceneSemanticGroup : int {
@@ -333,7 +335,8 @@ void UpdateSceneFilterSystemActive() {
 		|| g_BaseSceneObjectsPolicy != SceneObjectDrawPolicy::Draw
 		|| g_AnimatableSceneObjectsPolicy != SceneObjectDrawPolicy::Draw
 		|| g_AggregateSceneObjectsPolicy != SceneObjectDrawPolicy::Draw
-		|| g_SmokeVolumeObjectsPolicy !=  SceneObjectDrawPolicy::Draw
+		|| g_SmokeVolumeObjectsPolicy != SceneObjectDrawPolicy::Draw
+		|| g_OverlaysPolicy != SceneObjectDrawPolicy::Draw
 		|| g_PickerActive;
 
 	for(int i = 0; !bActive && i < (int)SceneSemanticGroup::Count; i++) {
@@ -347,7 +350,8 @@ void ClearSceneFliterSystemPolicies() {
 	g_BaseSceneObjectsPolicy = SceneObjectDrawPolicy::Draw;
 	g_AnimatableSceneObjectsPolicy = SceneObjectDrawPolicy::Draw;
 	g_AggregateSceneObjectsPolicy = SceneObjectDrawPolicy::Draw;
-	g_SmokeVolumeObjectsPolicy =  SceneObjectDrawPolicy::Draw;
+	g_SmokeVolumeObjectsPolicy = SceneObjectDrawPolicy::Draw;
+	g_OverlaysPolicy = SceneObjectDrawPolicy::Draw;
 
 	for(int i = 0; i < (int)SceneSemanticGroup::Count; i++) {
 		g_SceneSemanticPolicies[i] = SceneObjectDrawPolicy::Draw;
@@ -424,6 +428,17 @@ void SetupSceneFilterPolicies(const class CStreamSettings & settings) {
 		break;
 	default:
 		g_SmokeVolumeObjectsPolicy = SceneObjectDrawPolicy::Draw;
+		break;
+	}
+	switch(settings.OverlaysAction) {
+	case CStreamSettings::Action::NoDraw:
+		g_OverlaysPolicy = SceneObjectDrawPolicy::Hide;
+		break;
+	case CStreamSettings::Action::ZOnly:
+		g_OverlaysPolicy = SceneObjectDrawPolicy::DepthPassesOnly;
+		break;
+	default:
+		g_OverlaysPolicy = SceneObjectDrawPolicy::Draw;
 		break;
 	}
 
@@ -585,10 +600,15 @@ static bool SceneLayerContextIsDecals(const SceneLayerContext& context) {
 	return StringContains(context.ViewPass, "Decals");
 }
 
+static bool SceneLayerContextIsStencil(const SceneLayerContext& context) {
+	return StringContains(context.ViewPass, "Stencil");
+
+}
+
 static bool SceneLayerContextIsDepthPassesOnlyExcluded(const SceneLayerContext& context) {
 	return SceneLayerContextIsDecals(context)
+		|| SceneLayerContextIsStencil(context)
 		|| StringContains(context.ViewPass, "Translucent")
-		|| StringContains(context.ViewPass, "Stencil")
 		|| StringContains(context.ViewPass, "Overlay");
 }
 
@@ -631,8 +651,8 @@ static SceneObjectDrawPolicy ApplyLayerAwarePolicy(SceneObjectFilterClass filter
 	}
 
 	return nullptr == materialName && filterClass == SceneObjectFilterClass::Unknown
-		&& SceneLayerContextIsDepthPassesOnlyExcluded(context)
-		? SceneObjectDrawPolicy::Draw // unknown objects without material we always draw if it's not a depth pass
+		&& SceneLayerContextIsStencil(context)
+		? SceneObjectDrawPolicy::Draw
 		: policy
 	;
 }
@@ -736,7 +756,7 @@ static bool DebugPrintSceneData(SceneObjectFilterClass filterClass, const SceneL
 	return !hidden;
 }
 
-static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterClass, const SceneLayerContext & context, const CBaseSceneData& sceneData) {
+static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterClass, const SceneLayerContext & context, const CBaseSceneData * pSceneData) {
 
 	if(filterClass == SceneObjectFilterClass::SmokeVolume) {
 		return g_SmokeVolumeObjectsPolicy != SceneObjectDrawPolicy::Hide ? SceneObjectDrawPolicy::Draw : SceneObjectDrawPolicy::Hide;
@@ -752,13 +772,13 @@ static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterCla
 		return policy == SceneObjectDrawPolicy::DepthPassesOnly ? SceneObjectDrawPolicy::Hide : policy;
 	}
 
-	if (!SceneObjectFilterClassHasKnownSceneDataLayout(filterClass) || sceneData.material == 0) {
+	if (!SceneObjectFilterClassHasKnownSceneDataLayout(filterClass) || nullptr == pSceneData || pSceneData->material == nullptr) {
 		SceneObjectDrawPolicy semanticPolicy;
 		if (TryGetSceneSemanticPolicy(filterClass, context, nullptr, semanticPolicy)) return semanticPolicy;
 		return ApplyLayerAwarePolicy(filterClass, context, nullptr, GetSceneObjectClassPolicy(filterClass));
 	}
 
-	const char* materialName = sceneData.material->GetName();
+	const char* materialName = pSceneData->material->GetName();
 	if (materialName == nullptr) {
 		SceneObjectDrawPolicy semanticPolicy;
 		if (TryGetSceneSemanticPolicy(filterClass, context, nullptr, semanticPolicy)) return semanticPolicy;
@@ -786,6 +806,9 @@ static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterCla
 std::shared_timed_mutex g_RenderParam4ToSceneLayerContextsMutex;
 std::map<void *,SceneLayerContext> g_RenderParam4ToSceneLayerContexts;
 
+std::shared_timed_mutex g_BlockedSoftwareCommandListsMutex;
+std::set<void *> g_BlockedSoftwareCommandLists;
+
 static bool GetCurrentThreadSceneLayerContext(void * param4, SceneLayerContext& outContext) {
 	std::shared_lock<std::shared_timed_mutex> lock(g_RenderParam4ToSceneLayerContextsMutex);
 	auto it = g_RenderParam4ToSceneLayerContexts.find(param4);
@@ -806,6 +829,8 @@ void ClearThreadSceneLayerContexts(){
 	}
 }
 
+extern bool ToggleDrawing(void * param_1, bool value);
+/*
 typedef void (__fastcall * RenderLayerDrawListPart_t)(void * pSceneSystem, void * param_2, void * pCSceneLayer, void * param_4, unsigned int count, void *param_6);
 RenderLayerDrawListPart_t org_RenderLayerDrawListPart = nullptr;
 
@@ -827,9 +852,94 @@ void __fastcall new_RenderLayerDrawListPart(void * pSceneSystem, void * param_2,
 			std::unique_lock<std::shared_timed_mutex> lock(g_RenderParam4ToSceneLayerContextsMutex);
 			g_RenderParam4ToSceneLayerContexts.emplace(param_4, context).second;
 		}
+
+		if(0 < g_iSceneFilterDebug) {
+			advancedfx::Message("AFXDEBUG: RenderLayerDrawListPart layer=%s:%s flags=0x%04x\n",
+				context.ViewName ? context.ViewName : "?",
+				context.ViewPass ? context.ViewPass : "?",
+				context.Flags);
+		}
 	}
 
 	org_RenderLayerDrawListPart(pSceneSystem, param_2, pCSceneLayer, param_4, count, param_6);
+}*/
+
+typedef void * (__fastcall * SoftwareCommandList_Commit_t)(void * pThisSoftwareCommandList);
+SoftwareCommandList_Commit_t org_SoftwareCommandList_Commit = nullptr;
+void* __fastcall new_SoftwareCommandList_Commit(void * pThisSoftwareCommandList) {
+	if(g_bSceneFilterSystemActive) {
+		bool blocked;
+		{
+			std::shared_lock<std::shared_timed_mutex> lock(g_BlockedSoftwareCommandListsMutex);
+			blocked = g_BlockedSoftwareCommandLists.find(pThisSoftwareCommandList) != g_BlockedSoftwareCommandLists.end();
+		}
+		if(blocked) {
+			std::unique_lock<std::shared_timed_mutex> lock(g_BlockedSoftwareCommandListsMutex);
+			auto it = g_BlockedSoftwareCommandLists.find(pThisSoftwareCommandList);
+			blocked = it != g_BlockedSoftwareCommandLists.end();
+			if(blocked) g_BlockedSoftwareCommandLists.erase(it);
+		}
+		if(blocked) {
+			ToggleDrawing(pThisSoftwareCommandList,false);
+		}
+	}
+	return org_SoftwareCommandList_Commit(pThisSoftwareCommandList);
+}
+
+typedef void (__fastcall * InitDrawingData_t)(unsigned char *pDrawingData,void *pSceneView,void *pSceneLayer,uint32_t unkFlags4);
+InitDrawingData_t org_InitDrawingData = nullptr;
+void __fastcall new_InitDrawingData(unsigned char *pDrawingData,void *pSceneView,void *pSceneLayer,uint32_t unkFlags4) {
+	org_InitDrawingData(pDrawingData,pSceneView,pSceneLayer,unkFlags4);
+
+	if(g_bSceneFilterSystemActive && pSceneView && pSceneLayer)
+	{
+		void** pSceneViewVtable = *(void***)pSceneView;
+		SceneLayerContext context;
+		context.ViewName = ((const char* (__fastcall*)(void*))pSceneViewVtable[0])(pSceneView);
+		context.ViewPass = (const char*)pSceneLayer + 0x4b8;
+		context.Flags = *(uint32_t*)((unsigned char*)pSceneLayer + 0x48);
+
+		{
+			std::unique_lock<std::shared_timed_mutex> lock(g_RenderParam4ToSceneLayerContextsMutex);
+			g_RenderParam4ToSceneLayerContexts.emplace(pDrawingData, context).second;
+		}
+
+		if(0 < g_iSceneFilterDebug) {
+			advancedfx::Message("AFXDEBUG: InitDrawinData layer=%s:%s flags=0x%04x unkFlags4=0x%04x\n",
+				context.ViewName ? context.ViewName : "?",
+				context.ViewPass ? context.ViewPass : "?",
+				context.Flags,
+				unkFlags4
+			);
+		}
+
+		if(g_OverlaysPolicy != SceneObjectDrawPolicy::Draw && context.ViewPass && (
+			0 == strcmp(context.ViewPass,"OverlaySmoke") // We want to let through "OverlaySmokeUpdate"
+			|| StringContains(context.ViewPass,"FlashbangOverlay")
+			|| StringContains(context.ViewPass,"Fade To Black")
+		)) {
+			void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
+			ToggleDrawing(pCRenderContextDx11_SoftwareCommandList,true);
+			{
+				std::unique_lock<std::shared_timed_mutex> lock(g_BlockedSoftwareCommandListsMutex);
+				g_BlockedSoftwareCommandLists.emplace(pCRenderContextDx11_SoftwareCommandList);
+			}
+			if(org_SoftwareCommandList_Commit == nullptr) {
+				void** vtable = *(void***)pCRenderContextDx11_SoftwareCommandList;
+				org_SoftwareCommandList_Commit = (SoftwareCommandList_Commit_t)vtable[11];
+
+				DetourTransactionBegin();
+				DetourUpdateThread(GetCurrentThread());
+
+				DetourAttach(&(PVOID&)org_SoftwareCommandList_Commit, new_SoftwareCommandList_Commit);
+
+				if(NO_ERROR != DetourTransactionCommit()) {
+					ErrorBox("Failed to detour SoftwareCommandList::Commit.");
+					return;
+				}				
+			}
+		}
+	}
 }
 
 typedef void (__fastcall * DrawSceneData_t)(void * pDrawingData, CBaseSceneData * pSceneData);
@@ -838,15 +948,13 @@ DrawSceneData_t org_DrawSceneData = nullptr;
 typedef void (__fastcall * NoDrawSceneData_t)(void * pDrawingData);
 NoDrawSceneData_t org_NoDrawSceneData = nullptr;
 
-extern bool ToggleDrawing(void * param_1, bool value);
-
 void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneData) {
-	if(g_bSceneFilterSystemActive && nullptr != pSceneData && nullptr != pDrawingData) {
+	if(g_bSceneFilterSystemActive && nullptr != pDrawingData) {
 		SceneLayerContext context;
 		if(GetCurrentThreadSceneLayerContext(pDrawingData, context)){
 
 			SceneObjectFilterClass filterClass = SceneObjectFilterClass::Unknown;
-			if(pSceneData->sceneObject) {
+			if(pSceneData != nullptr && pSceneData->sceneObject) {
 				if(void* desc = *(void**)((unsigned char*)pSceneData->sceneObject + 0x18)) {
 					if(void** vtable = *(void***)desc) {
 						auto it = g_VtableToSceneObjectFilterClass.find(vtable);
@@ -858,24 +966,16 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 			
 			SceneObjectDrawPolicy policy;
 			if(DebugPrintSceneData(filterClass, context, pSceneData, 1)) {
-				policy = GetSceneDataPolicy(filterClass, context, *pSceneData);
+				policy = GetSceneDataPolicy(filterClass, context, pSceneData);
 			} else {
 				policy = SceneObjectDrawPolicy::Hide;
 			}			 
 			switch (policy) {
+			default:
 			case SceneObjectDrawPolicy::Draw:
 				break;
 			case SceneObjectDrawPolicy::DepthPassesOnly:
 			case SceneObjectDrawPolicy::Hide:
-			default:
-				/*{
-					void * pContext = ((void **)pDrawingData)[4];
-					if(ToggleDrawing(pContext,true)) {
-						org_DrawSceneData(pDrawingData,pSceneData);
-						ToggleDrawing(pContext,false);
-						return;
-					}
-				}*/
 				org_NoDrawSceneData(pDrawingData);
 				return;
 			}			
@@ -883,6 +983,39 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 	}
 	org_DrawSceneData(pDrawingData,pSceneData);
 }
+
+/*void __fastcall new_NoDrawSceneData(void * pDrawingData) {
+	if(g_bSceneFilterSystemActive && nullptr != pDrawingData) {
+		SceneLayerContext context;
+		if(GetCurrentThreadSceneLayerContext(pDrawingData, context)){
+			
+			SceneObjectFilterClass filterClass = SceneObjectFilterClass::Unknown;	
+			SceneObjectDrawPolicy policy;
+			if(DebugPrintSceneData(filterClass, context, nullptr, 1)) {
+				policy = GetSceneDataPolicy(filterClass, context, nullptr);
+			} else {
+				policy = SceneObjectDrawPolicy::Hide;
+			}			 
+			switch (policy) {
+			default:
+			case SceneObjectDrawPolicy::Draw:
+				break;
+			case SceneObjectDrawPolicy::DepthPassesOnly:
+			case SceneObjectDrawPolicy::Hide:
+				{
+					void * pContext = ((void **)pDrawingData)[4];
+					if(ToggleDrawing(pContext,true)) {
+						org_NoDrawSceneData(pDrawingData);
+						ToggleDrawing(pContext,false);
+						return;
+					}			
+				} break;
+			}			
+		}
+	}
+
+	org_NoDrawSceneData(pDrawingData);
+}*/
 
 struct FloatColor {
 	float r = 0;
@@ -1288,8 +1421,9 @@ void FUN_1800ea9e0(longlong pSceneSystem,longlong *param_2,uint *pCSceneLayer,ul
 - "null material"
 - "C:\\buildworker\\csgo_rel_win64\\build\\src\\scenesystem\\scenesystem.cpp"
 
+    FUN_18009c590(param_4,uVar6,param_3,param_5); // <-- This is AllocateSceneViewData
     local_118 = 0;
-    if (0 < *param_6) {
+    if (0 < *param_6)
         ...
         uVar26 = *puVar22;
         uVar21 = (ulonglong)uVar26;
@@ -1340,8 +1474,11 @@ void FUN_1800971c0(longlong param_1,longlong param_2)
 ...
 }
 */
-	org_RenderLayerDrawListPart = (RenderLayerDrawListPart_t)getAddress(sceneSystemDll, "4c 89 4c 24 20 4c 89 44 24 18 48 89 54 24 10 48 89 4c 24 08 55 53 56 57 41 57 48 8d 6c 24 e0 48 81 ec 20 01 00 00");
-	if (0 == org_RenderLayerDrawListPart) ErrorBox(MkErrStr(__FILE__, __LINE__));
+	//org_RenderLayerDrawListPart = (RenderLayerDrawListPart_t)getAddress(sceneSystemDll, "4c 89 4c 24 20 4c 89 44 24 18 48 89 54 24 10 48 89 4c 24 08 55 53 56 57 41 57 48 8d 6c 24 e0 48 81 ec 20 01 00 00");
+	//if (0 == org_RenderLayerDrawListPart) ErrorBox(MkErrStr(__FILE__, __LINE__));
+
+	org_InitDrawingData = (InitDrawingData_t)getAddress(sceneSystemDll, "48 89 5c 24 08 48 89 6c 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 83 ec 30 0f b6 81 30 02 00 00");
+	if (0 == org_InitDrawingData) ErrorBox(MkErrStr(__FILE__, __LINE__));
 
 	org_DrawSceneData = (DrawSceneData_t)getAddress(sceneSystemDll, "48 89 5c 24 20 55 48 83 ec 30 f6 81 30 02 00 00 40");
 	if (0 == org_DrawSceneData) ErrorBox(MkErrStr(__FILE__, __LINE__));
@@ -1349,12 +1486,15 @@ void FUN_1800971c0(longlong param_1,longlong param_2)
 	org_NoDrawSceneData = (NoDrawSceneData_t)getAddress(sceneSystemDll, "4c 8b dc 53 48 81 ec d0 00 00 00 83 79 30 01 48 8b d9 0f 8c a0 02 00 00 48 8b 49 20 48 8d 15 ?? ?? ?? ??");
 	if (0 == org_NoDrawSceneData) ErrorBox(MkErrStr(__FILE__, __LINE__));
 
-	if(org_RenderLayerDrawListPart && org_DrawSceneData && org_NoDrawSceneData) {
+	if(//org_RenderLayerDrawListPart &&
+		org_InitDrawingData && org_DrawSceneData && org_NoDrawSceneData) {
 		DetourTransactionBegin();
 		DetourUpdateThread(GetCurrentThread());
 
-		DetourAttach(&(PVOID&)org_RenderLayerDrawListPart, new_RenderLayerDrawListPart);
+		//DetourAttach(&(PVOID&)org_RenderLayerDrawListPart, new_RenderLayerDrawListPart);
+		DetourAttach(&(PVOID&)org_InitDrawingData, new_InitDrawingData);
 		DetourAttach(&(PVOID&)org_DrawSceneData, new_DrawSceneData);
+		//DetourAttach(&(PVOID&)org_NoDrawSceneData, new_NoDrawSceneData);
 
 		if(NO_ERROR != DetourTransactionCommit()) {
 			ErrorBox("Failed to detour SceneSystem functions.");

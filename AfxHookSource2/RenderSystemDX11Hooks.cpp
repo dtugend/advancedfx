@@ -552,10 +552,19 @@ private:
     SOURCESDK::VMatrix m_ProjectionMatrix;
 } g_EngineThread_ProjectionMatrix,g_RenderThread_ProjectionMatrix;
 
+typedef void (STDMETHODCALLTYPE * OMSetBlendState_t)(  ID3D11DeviceContext * This,
+    /* [annotation] */ 
+    _In_opt_  ID3D11BlendState *pBlendState,
+    /* [annotation] */ 
+    _In_opt_  const FLOAT BlendFactor[ 4 ],
+    /* [annotation] */ 
+    _In_  UINT SampleMask);
+
+OMSetBlendState_t g_Old_OMSetBlendState = nullptr;
 
 struct CNoDrawBlendState {
 public:
-    void OnTargetBegin(ID3D11Device * pDevice) {
+  void OnTargetBegin(ID3D11Device * pDevice) {
         if(pDevice) {
             D3D11_BLEND_DESC blendDesc{
                 FALSE, // AlphaToCoverageEnable
@@ -564,21 +573,21 @@ public:
                 {
                     {
                         FALSE, // BlendEnable
-                        D3D11_BLEND_ONE, // SrcBlend,
-                        D3D11_BLEND_ZERO, // DstBlend
+                        D3D11_BLEND_ZERO, // SrcBlend,
+                        D3D11_BLEND_ONE, // DstBlend
                         D3D11_BLEND_OP_ADD, // BlendOp
-                        D3D11_BLEND_ONE, // SrcBlendAlpha,
-                        D3D11_BLEND_ZERO, // DestBlendAlpha
+                        D3D11_BLEND_ZERO, // SrcBlendAlpha,
+                        D3D11_BLEND_ONE, // DestBlendAlpha
                         D3D11_BLEND_OP_ADD, // BlendOpAlpha
                         0 // RenderTargetWriteMask
                     }
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
-                    , { FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
+                    , { FALSE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, 0}
                 }
             };
             pDevice->CreateBlendState(&blendDesc, &m_BlendState);
@@ -590,25 +599,71 @@ public:
             m_BlendState->Release();
             m_BlendState = nullptr;
         }
+        if(m_OrgBlendState) {
+            m_OrgBlendState->Release();
+            m_OrgBlendState = nullptr;
+        }
+        m_Block = false;        
     }
 
     void Block(ID3D11DeviceContext * pContext){
-        pContext->OMGetBlendState(&m_OrgBlendState,nullptr,&m_SampleMask);
-        pContext->OMSetBlendState(m_BlendState,nullptr,0x0);
+        if(m_Block || nullptr == g_Old_OMSetBlendState) return;
+        m_Block = true;
+
+        pContext->OMGetBlendState(&m_OrgBlendState,m_OrgBlendFactor,&m_OrgSampleMask);
+        g_Old_OMSetBlendState(pContext, m_BlendState,nullptr,0x0);
     }
 
     void Unblock(ID3D11DeviceContext * pContext) {
-        pContext->OMSetBlendState(m_OrgBlendState,nullptr,m_SampleMask);
+        if(!m_Block) return;
+        m_Block = false;
+
+        g_Old_OMSetBlendState(pContext, m_OrgBlendState,m_OrgBlendFactor,m_OrgSampleMask);
         if(m_OrgBlendState) {
             m_OrgBlendState->Release();
             m_OrgBlendState = nullptr;
         }
     }
 
+    bool OnOMSetBlendState(ID3D11DeviceContext * pContext,
+    /* [annotation] */ 
+    _In_opt_  ID3D11BlendState *pBlendState,
+    /* [annotation] */ 
+    _In_opt_  const FLOAT BlendFactor[ 4 ],
+    /* [annotation] */ 
+    _In_  UINT SampleMask) {
+        if(!m_Block) return true;
+
+        if(pBlendState) {
+            pBlendState->AddRef();
+        }
+        if(m_OrgBlendState) {
+            m_OrgBlendState->Release();
+            m_OrgBlendState = nullptr;
+        }
+        m_OrgBlendState = pBlendState;
+        if(BlendFactor) {
+            m_OrgBlendFactor[0] = BlendFactor[0];
+            m_OrgBlendFactor[1] = BlendFactor[1];
+            m_OrgBlendFactor[2] = BlendFactor[2];
+            m_OrgBlendFactor[3] = BlendFactor[3];
+        } else {
+            m_OrgBlendFactor[0] = 1;
+            m_OrgBlendFactor[1] = 1;
+            m_OrgBlendFactor[2] = 1;
+            m_OrgBlendFactor[3] = 1;
+        }
+        m_OrgSampleMask = SampleMask;
+
+        return false;
+    }
+
 private:
+    bool m_Block = false;
     ID3D11BlendState* m_BlendState = nullptr;
+    FLOAT m_OrgBlendFactor[4]={1,1,1,1};
     ID3D11BlendState* m_OrgBlendState = nullptr;
-    UINT m_SampleMask;
+    UINT m_OrgSampleMask;
 } g_NoDraw;
 
 class CDepthCompositor {
@@ -1619,6 +1674,18 @@ void STDMETHODCALLTYPE New_OMSetRenderTargets( ID3D11DeviceContext * This,
     g_Old_OMSetRenderTargets(This, NumViews, ppRenderTargetViews, pDepthStencilView);
 }
 
+void STDMETHODCALLTYPE New_OMSetBlendState( ID3D11DeviceContext * This,
+    /* [annotation] */ 
+    _In_opt_  ID3D11BlendState *pBlendState,
+    /* [annotation] */ 
+    _In_opt_  const FLOAT BlendFactor[ 4 ],
+    /* [annotation] */ 
+    _In_  UINT SampleMask) {
+
+    if(g_NoDraw.OnOMSetBlendState(This,pBlendState,BlendFactor,SampleMask))
+        g_Old_OMSetBlendState(This,pBlendState,BlendFactor,SampleMask);
+
+}
 
 class IRenderThreadCallback abstract {
 public:
@@ -1944,6 +2011,7 @@ void Hook_Context(ID3D11DeviceContext * pDeviceContext) {
         //DetourDetach(&(PVOID&)g_Old_PSSetShaderResources, New_PSSetShaderResources);
         DetourDetach(&(PVOID&)g_Old_PSSetShader, New_PSSetShader);
         DetourDetach(&(PVOID&)g_Old_OMSetRenderTargets, New_OMSetRenderTargets);
+        DetourDetach(&(PVOID&)g_Old_OMSetBlendState, New_OMSetBlendState);
         DetourDetach(&(PVOID&)g_Old_ClearRenderTargetView, New_ClearRenderTargetView);
         DetourDetach(&(PVOID&)g_Old_ClearDepthStencilView, New_ClearDepthStencilView);
         //DetourDetach(&(PVOID&)g_Old_ResolveSubresource, New_ResolveSubresource);
@@ -1956,12 +2024,14 @@ void Hook_Context(ID3D11DeviceContext * pDeviceContext) {
     //g_Old_PSSetShaderResources = (PSSetShaderResources_t)vtable[8];
     g_Old_PSSetShader = (PSSetShader_t)vtable[9];
     g_Old_OMSetRenderTargets = (OMSetRenderTargets_t)vtable[33];
+    g_Old_OMSetBlendState = (OMSetBlendState_t)vtable[35];
     g_Old_ClearRenderTargetView = (ClearRenderTargetView_t)vtable[50];
     g_Old_ClearDepthStencilView = (ClearDepthStencilView_t)vtable[53];
     //g_Old_ResolveSubresource = (ResolveSubresource_t)vtable[57];
     //DetourAttach(&(PVOID&)g_Old_PSSetShaderResources, New_PSSetShaderResources);
     DetourAttach(&(PVOID&)g_Old_PSSetShader, New_PSSetShader);
     DetourAttach(&(PVOID&)g_Old_OMSetRenderTargets, New_OMSetRenderTargets);
+    DetourAttach(&(PVOID&)g_Old_OMSetBlendState, New_OMSetBlendState);
     DetourAttach(&(PVOID&)g_Old_ClearRenderTargetView, New_ClearRenderTargetView);
     DetourAttach(&(PVOID&)g_Old_ClearDepthStencilView, New_ClearDepthStencilView);
     //DetourAttach(&(PVOID&)g_Old_ResolveSubresource, New_ResolveSubresource);
@@ -2395,7 +2465,6 @@ unsigned char * __fastcall New_SceneSystem_CreateRenderContextPtr1(unsigned char
                     fnQueueCallback(pCRenderContextDx11_SoftwareCommandList, new CAfxRenderCallbackAfterMaybeSmokeDrawn());
                 }
             }
-
         }
     }  
     else if(fmt && 0 == strcmp("#%s/SetupLightsAndViewConstants",fmt)) {
@@ -3644,6 +3713,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
+            settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
                 command.emplace_back("r_drawparticles");
@@ -3663,6 +3733,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
+            settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
                 command.emplace_back("r_drawparticles");
@@ -3707,6 +3778,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.WorldAction = CStreamSettings::Action::NoDraw;
             settings.SkyAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
+            settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
                 command.emplace_back("r_drawparticles");
@@ -4391,6 +4463,11 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                 StreamSettingsActionSubCommand(stream.SmokeAction, &subArgs);
                 return;
             }
+            else if(0 == _stricmp("overlaysAction", arg2)) {
+                advancedfx::CSubCommandArgs subArgs(args, 3);
+                StreamSettingsActionSubCommand(stream.OverlaysAction, &subArgs);
+                return;
+            }
         }
 
         advancedfx::Message(
@@ -4471,6 +4548,10 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
         );
         advancedfx::Message(
             "%s %s smokeAction [...].\n"
+            , arg0, arg1
+        );
+        advancedfx::Message(
+            "%s %s overlaysAction [...].\n"
             , arg0, arg1
         );
 		return;
