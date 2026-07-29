@@ -3778,7 +3778,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.WorldAction = CStreamSettings::Action::NoDraw;
             settings.SkyAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
-            settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
                 command.emplace_back("r_drawparticles");
