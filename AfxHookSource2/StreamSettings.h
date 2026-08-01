@@ -37,6 +37,7 @@ public:
         , BeforeCommands(other.BeforeCommands)
         , AfterCommands(other.AfterCommands)
         , ViewModelAction(other.ViewModelAction)
+        , ParticlesAction(other.ParticlesAction)
         , FirstPersonLegsAction(other.FirstPersonLegsAction)
         , PlayersAction(other.PlayersAction)
         , WorldAction(other.WorldAction)
@@ -54,6 +55,7 @@ public:
             && BeforeCommands.empty()
             && AfterCommands.empty()
             && Action::Draw == ViewModelAction
+            && Action::Draw == ParticlesAction
             && Action::Draw == FirstPersonLegsAction
             && Action::Draw == PlayersAction
             && Action::Draw == WorldAction
@@ -82,6 +84,7 @@ public:
         if(cmp = CompareCommands(BeforeCommands, o.BeforeCommands)) return cmp;
         if(cmp = CompareCommands(AfterCommands, o.AfterCommands)) return cmp;
         if(cmp = CompareAction(ViewModelAction, o.ViewModelAction)) return cmp;
+        if(cmp = CompareAction(ParticlesAction, o.ParticlesAction)) return cmp;
         if(cmp = CompareAction(FirstPersonLegsAction, o.FirstPersonLegsAction)) return cmp;
         if(cmp = CompareAction(PlayersAction, o.PlayersAction)) return cmp;
         if(cmp = CompareAction(WorldAction, o.WorldAction)) return cmp;
@@ -177,6 +180,7 @@ public:
     };
 
     Action ViewModelAction = Action::Draw;
+    Action ParticlesAction = Action::Draw;
     Action FirstPersonLegsAction = Action::Draw;
     Action PlayersAction = Action::Draw;
     Action WorldAction = Action::Draw;

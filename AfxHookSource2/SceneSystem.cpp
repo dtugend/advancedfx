@@ -317,14 +317,16 @@ int g_iSceneFilterDebug = 0;
 
 enum class SceneSemanticGroup : int {
 	ViewModel = 0,
-	FirstPersonLegs = 1,
-	Players = 2,
-	World = 3,
-	Sky = 4,
-	Count = 5
+	Particles = 1,
+	FirstPersonLegs = 2,
+	Players = 3,
+	World = 4,
+	Sky = 5,
+	Count = 6
 };
 
 SceneObjectDrawPolicy g_SceneSemanticPolicies[(int)SceneSemanticGroup::Count] = {
+	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
@@ -377,6 +379,17 @@ void SetupSceneFilterPolicies(const class CStreamSettings & settings) {
 		g_SceneSemanticPolicies[(int)SceneSemanticGroup::ViewModel] = SceneObjectDrawPolicy::Draw;
 		break;
 	}
+	switch(settings.ParticlesAction) {
+	case CStreamSettings::Action::NoDraw:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Particles] = SceneObjectDrawPolicy::Hide;
+		break;
+	case CStreamSettings::Action::ZOnly:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Particles] = SceneObjectDrawPolicy::DepthPassesOnly;
+		break;
+	default:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Particles] = SceneObjectDrawPolicy::Draw;
+		break;
+	}	
 	switch(settings.FirstPersonLegsAction) {
 	case CStreamSettings::Action::NoDraw:
 		g_SceneSemanticPolicies[(int)SceneSemanticGroup::FirstPersonLegs] = SceneObjectDrawPolicy::Hide;
@@ -458,6 +471,7 @@ enum class SceneObjectFilterClass {
 	SkyBox6Face,
 	ProjectedDecal,
 	SmokeVolume,
+	Particles,
 	Unknown
 };
 
@@ -510,6 +524,7 @@ static bool TryParseSceneObjectDrawPolicy(const char* value, SceneObjectDrawPoli
 static const char* SceneSemanticGroupToString(SceneSemanticGroup group) {
 	switch (group) {
 	case SceneSemanticGroup::ViewModel: return "viewModel";
+	case SceneSemanticGroup::Particles: return "particles";
 	case SceneSemanticGroup::FirstPersonLegs: return "firstPersonLegs";
 	case SceneSemanticGroup::Players: return "players";
 	case SceneSemanticGroup::World: return "world";
@@ -519,8 +534,12 @@ static const char* SceneSemanticGroupToString(SceneSemanticGroup group) {
 }
 
 static bool TryGetSceneSemanticGroup(const char* value, SceneSemanticGroup& outGroup) {
-	if (0 == _stricmp(value, "viewmodel")) {
+	if (0 == _stricmp(value, "viewModel")) {
 		outGroup = SceneSemanticGroup::ViewModel;
+		return true;
+	}
+	if (0 == _stricmp(value, "particles")) {
+		outGroup = SceneSemanticGroup::Particles;
 		return true;
 	}
 	if (0 == _stricmp(value, "firstPersonLegs")) {
@@ -772,6 +791,10 @@ static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterCla
 	if (SceneObjectFilterClassIsProjectedDecal(filterClass)) {
 		SceneObjectDrawPolicy policy = g_SceneSemanticPolicies[(int)SceneSemanticGroup::World];
 		return policy == SceneObjectDrawPolicy::DepthPassesOnly ? SceneObjectDrawPolicy::Hide : policy;
+	}
+
+	if(filterClass == SceneObjectFilterClass::Particles) {
+		return g_SceneSemanticPolicies[(int)SceneSemanticGroup::Particles];
 	}
 
 	if (!SceneObjectFilterClassHasKnownSceneDataLayout(filterClass) || nullptr == pSceneData || pSceneData->material == nullptr) {
@@ -1264,6 +1287,18 @@ CON_COMMAND(__mirv_scene_filter, "")
 			}
 		}		
 
+		if (!_stricmp(arg1, "overlays"))
+		{
+			if (TryParseSceneObjectDrawPolicy(arg2, policy))
+			{
+				g_OverlaysPolicy = policy == SceneObjectDrawPolicy::Hide
+					? SceneObjectDrawPolicy::Hide
+					: SceneObjectDrawPolicy::Draw;
+				UpdateSceneFilterSystemActive();
+				return;
+			}
+		}		
+
 		if (TryGetSceneSemanticGroup(arg1, semanticGroup))
 		{
 			if (TryParseSceneObjectDrawPolicy(arg2, policy))
@@ -1309,7 +1344,9 @@ CON_COMMAND(__mirv_scene_filter, "")
 		"%s animatable draw|hide|zonly|0|1 - Controls CAnimatableSceneObjectDesc entries in the hooked scene draw path.\n"
 		"%s aggregate draw|hide|zonly|0|1 - Controls CAggregateSceneObjectDesc entries in the hooked scene draw path.\n"
 		"%s smoke draw|hide|0|1 - Controls CSmokeVolumeObjectDesc by patching its vtable while hidden.\n"
+		"%s overlays draw|hide|0|1 - Controls overlays pass.\n"
 		"%s viewModel draw|hide|zonly - Controls viewmodel layers.\n"
+		"%s particles draw|hide|zonly - Controls viewmodel effect layers.\n"
 		"%s firstPersonLegs draw|hide|zonly - Controls first person legs layers.\n"
 		"%s players draw|hide|zonly - Controls player character layers.\n"
 		"%s world draw|hide|zonly - Controls layers not matched by another semantic group.\n"
@@ -1317,7 +1354,9 @@ CON_COMMAND(__mirv_scene_filter, "")
 		"%s debug <iCount> - Print up to iCount entries for each hooked scene draw call. Use 0 to disable.\n"
 		"%s picker ent 0|1 - Tell picker if entity is visible (1) or not (0). (Or start picking with 1.)\n"
 		"%s picker stop - Stop picking.\n"
-		"Current values: base=%s animatable=%s aggregate=%s smoke=%s viewModel=%s firstPersonLegs=%s players=%s world=%s sky=%s debug=%i\n"
+		"Current values: base=%s animatable=%s aggregate=%s smoke=%s overlays=%s viewModel=%s particles=%s firstPersonLegs=%s players=%s world=%s sky=%s debug=%i\n"
+		, arg0
+		, arg0
 		, arg0
 		, arg0
 		, arg0
@@ -1334,7 +1373,9 @@ CON_COMMAND(__mirv_scene_filter, "")
 		, SceneObjectDrawPolicyToString(g_AnimatableSceneObjectsPolicy)
 		, SceneObjectDrawPolicyToString(g_AggregateSceneObjectsPolicy)
 		, SceneObjectDrawPolicyToString(g_SmokeVolumeObjectsPolicy)
+		, SceneObjectDrawPolicyToString(g_OverlaysPolicy)
 		, SceneObjectDrawPolicyToString(g_SceneSemanticPolicies[(int)SceneSemanticGroup::ViewModel])
+		, SceneObjectDrawPolicyToString(g_SceneSemanticPolicies[(int)SceneSemanticGroup::Particles])
 		, SceneObjectDrawPolicyToString(g_SceneSemanticPolicies[(int)SceneSemanticGroup::FirstPersonLegs])
 		, SceneObjectDrawPolicyToString(g_SceneSemanticPolicies[(int)SceneSemanticGroup::Players])
 		, SceneObjectDrawPolicyToString(g_SceneSemanticPolicies[(int)SceneSemanticGroup::World])
@@ -1399,12 +1440,16 @@ void GetClientDllSceneObjectVtable(HMODULE clientDll) {
 	GetSceneObjectVtable(clientDll, ".?AVCSmokeVolumeSceneObjectDesc@@", SceneObjectFilterClass::SmokeVolume);
 }
 
+void GetParticlesDllSceneObjectVtable(HMODULE particlesDll) {
+	GetSceneObjectVtable(particlesDll, ".?AVCParticleObjectDesc@@", SceneObjectFilterClass::Particles);
+}
+
 void HookSceneSystem(HMODULE sceneSystemDll) {
 	GetSceneObjectVtable(sceneSystemDll, ".?AVCBaseSceneObjectDesc@@", SceneObjectFilterClass::Base);
 	GetSceneObjectVtable(sceneSystemDll, ".?AVCAnimatableSceneObjectDesc@@", SceneObjectFilterClass::Animatable);
 	GetSceneObjectVtable(sceneSystemDll, ".?AVCAggregateSceneObjectDesc@@", SceneObjectFilterClass::Aggregate);
 	GetSceneObjectVtable(sceneSystemDll, ".?AVCSkyBoxObjectDesc@@", SceneObjectFilterClass::SkyBox);
-	GetSceneObjectVtable(sceneSystemDll,  ".?AVC6FaceSkyboxObjectDesc@@", SceneObjectFilterClass::SkyBox6Face);
+	GetSceneObjectVtable(sceneSystemDll, ".?AVC6FaceSkyboxObjectDesc@@", SceneObjectFilterClass::SkyBox6Face);
 	GetSceneObjectVtable(sceneSystemDll, ".?AVCProjectedDecalSceneObjectDesc@@", SceneObjectFilterClass::ProjectedDecal);
 
 /*

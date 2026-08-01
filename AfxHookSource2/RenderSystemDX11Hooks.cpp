@@ -3710,6 +3710,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
         } else if(0 == _stricmp(arg1,"world")) {
             settings.Capture = CStreamSettings::Capture_e::BeforeUi;
             settings.ViewModelAction = CStreamSettings::Action::NoDraw;
+            settings.ParticlesAction = CStreamSettings::Action::NoDraw;
             settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
@@ -3730,6 +3731,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.Capture = CStreamSettings::Capture_e::BeforeUi;
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
             settings.ViewModelAction = CStreamSettings::Action::NoDraw;
+            settings.ParticlesAction = CStreamSettings::Action::NoDraw;
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
@@ -3773,6 +3775,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
         } else if(0 == _stricmp(arg1,"viewModelMatte")) {
             settings.Capture = CStreamSettings::Capture_e::BeforeUi;
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
+            settings.ParticlesAction = CStreamSettings::Action::NoDraw;
             settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::NoDraw;
             settings.WorldAction = CStreamSettings::Action::NoDraw;
@@ -4432,9 +4435,14 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                 g_AfxStreams.Console_Edit_RenderCommands(stream.AfterCommands, &subArgs);
                 return;
             }
-            else if(0 == _stricmp("viewmodelAction", arg2)) {
+            else if(0 == _stricmp("viewModelAction", arg2)) {
                 advancedfx::CSubCommandArgs subArgs(args, 3);
                 StreamSettingsActionSubCommand(stream.ViewModelAction, &subArgs);
+                return;
+            }
+            else if(0 == _stricmp("particlesAction", arg2)) {
+                advancedfx::CSubCommandArgs subArgs(args, 3);
+                StreamSettingsActionSubCommand(stream.ParticlesAction, &subArgs);
                 return;
             }
             else if(0 == _stricmp("firstPersonLegsAction", arg2)) {
@@ -4526,31 +4534,35 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s viewmodelAction [...].\n"
+            "%s %s viewModelAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s firstPersonLegsAction [...].\n"
+            "%s %s particlesAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s playersAction [...].\n"
+            "%s %s firstPersonLegsAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s worldAction [...].\n"
+            "%s %s playersAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s skyAction [...].\n"
+            "%s %s worldAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s smokeAction [...].\n"
+            "%s %s skyAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(
-            "%s %s overlaysAction [...].\n"
+            "%s %s smokeAction [...]\n"
+            , arg0, arg1
+        );
+        advancedfx::Message(
+            "%s %s overlaysAction [...]\n"
             , arg0, arg1
         );
 		return;

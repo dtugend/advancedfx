@@ -2009,6 +2009,7 @@ void My_Console_DevWarning(int level, const char* fmt, ...) {
 }
 
 extern void GetClientDllSceneObjectVtable(HMODULE clientDll);
+extern void  GetParticlesDllSceneObjectVtable(HMODULE particlesDll);
 
 void LibraryHooksW(HMODULE hModule, LPCWSTR lpLibFileName)
 {
@@ -2024,6 +2025,7 @@ void LibraryHooksW(HMODULE hModule, LPCWSTR lpLibFileName)
 	static bool bFirstSchemaSystem = true;
 	static bool bFirstSceneSystem = true;
 	static bool bFirstResourceSystem = true;
+	static bool bFirstParticles = true;
 	
 	CommonHooks();
 
@@ -2175,6 +2177,11 @@ void LibraryHooksW(HMODULE hModule, LPCWSTR lpLibFileName)
 	{
 		bFirstResourceSystem = false;
 		g_H_ResourceSystemDll = hModule;
+	}
+	else if(bFirstParticles && StringEndsWithW(lpLibFileName, L"particles.dll"))
+	{
+		bFirstParticles = false;
+		GetParticlesDllSceneObjectVtable(hModule);
 	}
 }
 
