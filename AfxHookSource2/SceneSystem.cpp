@@ -288,7 +288,6 @@ void updateSkyboxEntities() {
 
 size_t g_SceneLayer_pszViewPass_Offset = -1;
 size_t g_SceneLayer_Flags_Offset = -1;
-//size_t g_SceneData_Flags_Offset = -1;
 
 struct CBaseSceneData {
 	char _pad0[0x18];
@@ -298,6 +297,8 @@ struct CBaseSceneData {
 	uint32_t color;
 	char _pad2[0x14];
 };
+
+size_t g_SceneObject_pSceneObjectDesc_Offset = -1;
 
 static_assert(sizeof(CBaseSceneData) == 0x68, "Unexpected CBaseSceneData size.");
 
@@ -681,12 +682,11 @@ static bool TryGetSceneSemanticPolicy(SceneObjectFilterClass filterClass, const 
 static const char* GetSceneObjectDescName(const CBaseSceneData& sceneData) {
 	if (sceneData.sceneObject == nullptr) return nullptr;
 
-	void* desc = *(void**)((unsigned char*)sceneData.sceneObject + 0x18);
+	void* desc = *(void**)((unsigned char*)sceneData.sceneObject + g_SceneObject_pSceneObjectDesc_Offset);
 	if (desc == nullptr) return nullptr;
 
+ 	// See notes in HookSceneSystem about DebugSceneData for vtabel offset:
 	void** vtable = *(void***)desc;
-	if (vtable == nullptr || vtable[0] == nullptr) return nullptr;
-
 	return ((const char* (__fastcall*)(void*))vtable[0])(desc);
 }
 
@@ -957,12 +957,11 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 
 			SceneObjectFilterClass filterClass = SceneObjectFilterClass::Unknown;
 			if(pSceneData != nullptr && pSceneData->sceneObject) {
-				if(void* desc = *(void**)((unsigned char*)pSceneData->sceneObject + 0x18)) {
-					if(void** vtable = *(void***)desc) {
-						auto it = g_VtableToSceneObjectFilterClass.find(vtable);
-						if(it != g_VtableToSceneObjectFilterClass.end())
-							filterClass = it->second;
-					}
+				if(void* desc = *(void**)((unsigned char*)pSceneData->sceneObject + g_SceneObject_pSceneObjectDesc_Offset)) {
+					void** vtable = *(void***)desc;
+					auto it = g_VtableToSceneObjectFilterClass.find(vtable);
+					if(it != g_VtableToSceneObjectFilterClass.end())
+						filterClass = it->second;
 				}
 			}
 			
@@ -1540,6 +1539,12 @@ void FUN_1800e7590(undefined8 param_1,longlong pSceneLayer,longlong param_3,uint
           pcVar12 = "Fullsort";
         }
         Warning("%s:%s after sort (%s %s)\n",uVar9,pSceneLayer + 0x4b8,pcVar12,pcVar8); // --> 0x4b8 is g_SceneLayer_pszViewPass_Offset
+	// ...
+		plVar7 = (longlong *)(pSceneData + 0x18); // plVar7 == &(pSceneData->SceneObject)
+			//...
+		    uVar9 = (**(code **)**(undefined8 **)(*plVar7 + 0x18))(); // 0x18 is g_SceneObject_pSceneObjectDesc_Offset (pSceneData->SceneObject->SceneObjectDesc::GetName)
+            Warning("  [%i] %s %s %s IndexCount: %d\n",(int)plVar7[8],uVar9,pcVar12,pcVar8,uVar11);
+	// ...
 }
 
 // DrawSceneData function
@@ -1575,6 +1580,7 @@ void FUN_18009c880(longlong param_1,longlong param_2)
 	// See notes in HookSceneSystem about DebugSceneData above:
 	g_SceneLayer_pszViewPass_Offset = 0x4b8;
 	g_SceneLayer_Flags_Offset = 0x48;
+	g_SceneObject_pSceneObjectDesc_Offset = 0x18;
 
 	// See notes in HookSceneSystem about DrawSceneData above:
 	//g_SceneData_Flags_Offset = 0x62;
