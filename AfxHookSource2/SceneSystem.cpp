@@ -286,6 +286,10 @@ void updateSkyboxEntities() {
 
 }
 
+size_t g_SceneLayer_pszViewPass_Offset = -1;
+size_t g_SceneLayer_Flags_Offset = -1;
+//size_t g_SceneData_Flags_Offset = -1;
+
 struct CBaseSceneData {
 	char _pad0[0x18];
 	void* sceneObject;
@@ -686,13 +690,15 @@ static const char* GetSceneObjectDescName(const CBaseSceneData& sceneData) {
 	return ((const char* (__fastcall*)(void*))vtable[0])(desc);
 }
 
+/* This doesn't seem quite correct, removing feature for now.
 static uint32_t GetSceneDataSort(const CBaseSceneData& sceneData) {
 	return *(uint32_t*)((const unsigned char*)&sceneData + 0x58);
-}
+}*/
 
+/* This is probably correct, but we don't need it for now.
 static uint16_t GetSceneDataFlags(const CBaseSceneData& sceneData) {
-	return *(uint16_t*)((const unsigned char*)&sceneData + 0x62);
-}
+	return *(uint16_t*)((const unsigned char*)&sceneData + g_SceneData_Flags_Offset);
+}*/
 
 static bool DebugPrintSceneData(SceneObjectFilterClass filterClass, const SceneLayerContext & context, const CBaseSceneData* sceneData, int count) {
 	if (g_iSceneFilterDebug <= 0 && !g_PickerActive || sceneData == nullptr || count <= 0) return true;
@@ -705,8 +711,6 @@ static bool DebugPrintSceneData(SceneObjectFilterClass filterClass, const SceneL
 		const char* materialName = canReadSceneDataFields ? (sceneData[i].material ? sceneData[i].material->GetName() : nullptr) : nullptr;
 		const char* descName = canReadSceneDataFields ? GetSceneObjectDescName(sceneData[i]) : nullptr;
 		void* sceneObject = canReadSceneDataFields ? sceneData[i].sceneObject : nullptr;
-		uint32_t sort = canReadSceneDataFields ? GetSceneDataSort(sceneData[i]) : 0;
-		uint16_t flags = canReadSceneDataFields ? GetSceneDataFlags(sceneData[i]) : 0;
 
 		bool bInList = false;
 		bool bIHidden = false;
@@ -738,7 +742,7 @@ static bool DebugPrintSceneData(SceneObjectFilterClass filterClass, const SceneL
 		if((!bInList || bIHidden || !g_PickerPrint) && g_iSceneFilterDebug <= 0) continue;
 
 		advancedfx::Message(
-			"AFXDEBUG: mirv_scene_filter %s[%i/%i] layer=%s:%s group=%s desc=%s material=%s sceneObject=0x%p sort=0x%08x flags=0x%04x\n",
+			"AFXDEBUG: mirv_scene_filter %s[%i/%i] layer=%s:%s group=%s desc=%s material=%s sceneObject=0x%p\n",
 			SceneObjectFilterClassToString(filterClass),
 			i,
 			count,
@@ -747,9 +751,7 @@ static bool DebugPrintSceneData(SceneObjectFilterClass filterClass, const SceneL
 			SceneSemanticGroupToString(ClassifySceneObject(filterClass, context, materialName)),
 			descName ? descName : "?",
 			materialName ? materialName : "?",
-			sceneObject,
-			sort,
-			flags
+			sceneObject
 		);
 	}
 
@@ -845,7 +847,7 @@ void __fastcall new_RenderLayerDrawListPart(void * pSceneSystem, void * param_2,
 				context.ViewName = ((const char* (__fastcall*)(void*))vtable[0])(pCSceneView);
 			}
 		}
-		context.ViewPass = (const char*)pCSceneLayer + 0x4b8;
+		context.ViewPass = (const char*)pCSceneLayer + g_SceneLayer_pszViewPass_Offset;
 		context.Flags = *(uint32_t*)((unsigned char*)pCSceneLayer + 0x48);
 
 		{
@@ -895,9 +897,9 @@ void __fastcall new_InitDrawingData(unsigned char *pDrawingData,void *pSceneView
 	{
 		void** pSceneViewVtable = *(void***)pSceneView;
 		SceneLayerContext context;
-		context.ViewName = ((const char* (__fastcall*)(void*))pSceneViewVtable[0])(pSceneView);
-		context.ViewPass = (const char*)pSceneLayer + 0x4b8;
-		context.Flags = *(uint32_t*)((unsigned char*)pSceneLayer + 0x48);
+		context.ViewName = ((const char* (__fastcall*)(void*))pSceneViewVtable[0])(pSceneView); // see DebugSceneData function for how to know it's fist function in vtable.
+		context.ViewPass = (const char*)pSceneLayer + g_SceneLayer_pszViewPass_Offset;
+		context.Flags = *(uint32_t*)((unsigned char*)pSceneLayer + g_SceneLayer_Flags_Offset);
 
 		{
 			std::unique_lock<std::shared_timed_mutex> lock(g_RenderParam4ToSceneLayerContextsMutex);
@@ -1412,17 +1414,54 @@ void FUN_1800ea9e0(longlong pSceneSystem,longlong *param_2,uint *pCSceneLayer,ul
                   uint count,int *param_6)
 
 {
-    FUN_180096ed0(param_4,uVar4,pCSceneLayer,count); SceneSystemSortLayer, references strings such as
-- "Batchsort"
-- "Fullsort"
-- "shaded pass"
-- "depth pass"
-- "%s:%s after sort (%s %s)\n" (recommended)
-- "null material"
-- "C:\\buildworker\\csgo_rel_win64\\build\\src\\scenesystem\\scenesystem.cpp"
-
-    FUN_18009c590(param_4,uVar6,param_3,param_5); // <-- This is AllocateSceneViewData
+    FUN_18009c590(param_4,uVar6,param_3,param_5); // <-- This is the InitDrawingData function
     local_118 = 0;
+
+    if (0 < *param_6) {
+      do {
+        puVar25 = *(uint **)(*(longlong *)(param_6 + 2) + (longlong)puVar22);
+        puVar23 = puVar25 + 2;
+        local_f8 = puVar25;
+        if (*(CThreadedJob **)((longlong)local_d8 + (longlong)puVar22) == (CThreadedJob *)0x0) {
+          FUN_1800e7590(0,param_3,puVar23,*puVar25); // This is the DebugSceneData function
+        }
+        else {
+          CThreadedJob::WaitOrImmediatelyExecute
+                    (*(CThreadedJob **)((longlong)local_d8 + (longlong)puVar22));
+        }
+        uVar29 = *puVar25;
+        uVar24 = (ulonglong)uVar29;
+        if ((param_3[0x12] & 0x28) == 0) {
+          if (uVar29 != 0) {
+            do {
+              uVar29 = puVar23[0x18];
+              bVar12 = (byte)uVar29 & 3;
+              bVar17 = *(byte *)(*(longlong *)(puVar23 + 6) + 0x9a) & 3;
+              if (bVar17 < bVar12) {
+                bVar17 = bVar12;
+              }
+              if (bVar17 != 0) {
+                plVar9 = *(longlong **)(*(longlong *)(puVar23 + 6) + 0x18);
+                (**(code **)(*plVar9 + 0x18))
+                          (plVar9,*(undefined8 *)(param_4 + 0x20),puVar23,uVar6,param_3,bVar17);
+              }
+              if (((byte)uVar29 & 8) == 0) {
+                FUN_18009c880(param_4,puVar23); // <--- This is the DrawSceneData function we are after, it's also called in a deeper tree further bellow from FUN_1800eb800 / RenderLayerDrawListPart
+              }
+              else {
+                FUN_18009cca0(param_4); // <-- This is NoDrawSceneData function we are after
+              }
+              puVar23 = puVar23 + 0x1c;
+              uVar24 = uVar24 - 1;
+              puVar25 = local_f8;
+            } while (uVar24 != 0);
+          }
+        }
+        else if (uVar29 != 0) {
+			// ...
+		}
+	}
+
     if (0 < *param_6)
         ...
         uVar26 = *puVar22;
@@ -1443,10 +1482,10 @@ void FUN_1800ea9e0(longlong pSceneSystem,longlong *param_2,uint *pCSceneLayer,ul
                 ;
               }
               if (((byte)uVar26 & 8) == 0) {
-                FUN_1800971c0(param_4,puVar20); // <--- This is the Draw function we are after, it's also called in a deeper tree further bellow from FUN_180096ed0
+                FUN_1800971c0(param_4,puVar20); // <--- This is the DrawSceneData function we are after, it's also called in a deeper tree further bellow from FUN_180096ed0
               }
               else {
-                FUN_1800975e0(param_4); // <-- This is NoDraw function we are after
+                FUN_1800975e0(param_4); // <-- This is NoDrawSceneData function we are after
               }
               puVar20 = puVar20 + 0x1a;
               uVar21 = uVar21 - 1;
@@ -1473,6 +1512,53 @@ void FUN_1800971c0(longlong param_1,longlong param_2)
   }
 ...
 }
+
+// DebugSceneData function
+//
+// - "Batchsort"
+// - "Fullsort"
+// - "shaded pass"
+// - "depth pass"
+// - "%s:%s after sort (%s %s)\n" (recommended)
+// - "null material"
+// - "C:\\buildworker\\csgo_rel_win64\\build\\src\\scenesystem\\scenesystem.cpp"
+void FUN_1800e7590(undefined8 param_1,longlong pSceneLayer,longlong param_3,uint unkMaybeDictSize)
+{
+  // ...
+  if (param_4 != 0) {
+    uVar1 = *(uint *)(pSceneLayer + 0x48); // --> g_SceneLayer_Flags_Offset == 0x48
+    uVar13 = (ulonglong)param_4;
+	// ...
+        uVar2 = *(uint *)(pSceneLayer + 0x48);
+        uVar9 = (**(code **)**(undefined8 **)(pSceneLayer + 0x6f0))(); // pSceneLayer + 0x6f0 == pSceneView
+        pcVar8 = "shaded pass";
+        if ((uVar1 & 0x1000000) != 0) {
+          pcVar8 = "depth pass";
+        }
+        pcVar12 = "Batchsort";
+        if ((uVar2 & 1) != 0) {
+          pcVar12 = "Fullsort";
+        }
+        Warning("%s:%s after sort (%s %s)\n",uVar9,pSceneLayer + 0x4b8,pcVar12,pcVar8); // --> 0x4b8 is g_SceneLayer_pszViewPass_Offset
+}
+
+// DrawSceneData function
+void FUN_18009c880(longlong param_1,longlong param_2)
+{
+	// ...
+  *(undefined8 *)(param_1 + 0x38) = *(undefined8 *)(*(longlong *)(param_2 + 0x18) + 0x18);
+  if ((*(byte *)(param_2 + 0x62) & 8) == 0) {
+    uVar6 = *(undefined8 *)(param_2 + 0x20);
+  }
+  *(undefined8 *)(param_1 + 0x40) = uVar6;
+  uVar7 = *(ushort *)(param_1 + 0x48);
+  if (*(ushort *)(param_1 + 0x48) <= *(ushort *)(param_2 + 0x5e)) {
+    uVar7 = *(ushort *)(param_2 + 0x5e);
+  }
+  *(ushort *)(param_1 + 0x48) = uVar7;
+  *(undefined8 *)(param_1 + 0x50) = *(undefined8 *)(param_2 + 0x38);
+  *(undefined2 *)(param_1 + 0x4a) = *(undefined2 *)(param_2 + 0x62); // g_SceneData_Flags_Offset
+}
 */
 	//org_RenderLayerDrawListPart = (RenderLayerDrawListPart_t)getAddress(sceneSystemDll, "4c 89 4c 24 20 4c 89 44 24 18 48 89 54 24 10 48 89 4c 24 08 55 53 56 57 41 57 48 8d 6c 24 e0 48 81 ec 20 01 00 00");
 	//if (0 == org_RenderLayerDrawListPart) ErrorBox(MkErrStr(__FILE__, __LINE__));
@@ -1485,6 +1571,13 @@ void FUN_1800971c0(longlong param_1,longlong param_2)
 
 	org_NoDrawSceneData = (NoDrawSceneData_t)getAddress(sceneSystemDll, "4c 8b dc 53 48 81 ec d0 00 00 00 83 79 30 01 48 8b d9 0f 8c a0 02 00 00 48 8b 49 20 48 8d 15 ?? ?? ?? ??");
 	if (0 == org_NoDrawSceneData) ErrorBox(MkErrStr(__FILE__, __LINE__));
+
+	// See notes in HookSceneSystem about DebugSceneData above:
+	g_SceneLayer_pszViewPass_Offset = 0x4b8;
+	g_SceneLayer_Flags_Offset = 0x48;
+
+	// See notes in HookSceneSystem about DrawSceneData above:
+	//g_SceneData_Flags_Offset = 0x62;
 
 	if(//org_RenderLayerDrawListPart &&
 		org_InitDrawingData && org_DrawSceneData && org_NoDrawSceneData) {
