@@ -319,13 +319,15 @@ enum class SceneSemanticGroup : int {
 	ViewModel = 0,
 	Particles = 1,
 	FirstPersonLegs = 2,
-	Players = 3,
-	World = 4,
-	Sky = 5,
-	Count = 6
+	Shells = 3,
+	Players = 4,
+	World = 5,
+	Sky = 6,
+	Count = 7
 };
 
 SceneObjectDrawPolicy g_SceneSemanticPolicies[(int)SceneSemanticGroup::Count] = {
+	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
@@ -399,6 +401,17 @@ void SetupSceneFilterPolicies(const class CStreamSettings & settings) {
 		break;
 	default:
 		g_SceneSemanticPolicies[(int)SceneSemanticGroup::FirstPersonLegs] = SceneObjectDrawPolicy::Draw;
+		break;
+	}
+	switch(settings.ShellsAction) {
+	case CStreamSettings::Action::NoDraw:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Shells] = SceneObjectDrawPolicy::Hide;
+		break;
+	case CStreamSettings::Action::ZOnly:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Shells] = SceneObjectDrawPolicy::DepthPassesOnly;
+		break;
+	default:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Shells] = SceneObjectDrawPolicy::Draw;
 		break;
 	}
 	switch(settings.PlayersAction) {
@@ -526,6 +539,7 @@ static const char* SceneSemanticGroupToString(SceneSemanticGroup group) {
 	case SceneSemanticGroup::ViewModel: return "viewModel";
 	case SceneSemanticGroup::Particles: return "particles";
 	case SceneSemanticGroup::FirstPersonLegs: return "firstPersonLegs";
+	case SceneSemanticGroup::Shells: return "shells";
 	case SceneSemanticGroup::Players: return "players";
 	case SceneSemanticGroup::World: return "world";
 	case SceneSemanticGroup::Sky: return "sky";
@@ -544,6 +558,10 @@ static bool TryGetSceneSemanticGroup(const char* value, SceneSemanticGroup& outG
 	}
 	if (0 == _stricmp(value, "firstPersonLegs")) {
 		outGroup = SceneSemanticGroup::FirstPersonLegs;
+		return true;
+	}
+	if (0 == _stricmp(value, "shells")) {
+		outGroup = SceneSemanticGroup::Shells;
 		return true;
 	}
 	if (0 == _stricmp(value, "players") || 0 == _stricmp(value, "player")) {
@@ -647,10 +665,18 @@ static bool SceneDataMaterialIsPlayer(SceneObjectFilterClass filterClass, const 
 		|| (filterClass == SceneObjectFilterClass::Animatable && StringContains(materialName, "compmat_")); // skinned weapons/gloves
 }
 
+static bool SceneDataMaterialIsShell(SceneObjectFilterClass filterClass, const char* materialName) {
+	if (materialName == nullptr) return false;
+
+	return StringContains(materialName, "materials/models/weapons/shared/shells/")
+		|| StringContains(materialName, "weapons/models/shared/shells/");
+}
+
 static SceneSemanticGroup ClassifySceneObject(SceneObjectFilterClass filterClass, const SceneLayerContext& context, const char* materialName) {
 	// Precedence is intentional: first-person layers contain weapon/player materials that should stay separate from world/player mattes.
 	if (SceneLayerContextIsViewModel(context)) return SceneSemanticGroup::ViewModel;
 	if (SceneLayerContextIsFirstPersonLegs(context)) return SceneSemanticGroup::FirstPersonLegs;
+	if (SceneDataMaterialIsShell(filterClass, materialName)) return SceneSemanticGroup::Shells;
 	if (SceneDataMaterialIsPlayer(filterClass, materialName)) return SceneSemanticGroup::Players;
 	if (SceneLayerContextIsSky(context)) return SceneSemanticGroup::Sky;
 	if (SceneLayerContextIsPlayers(context)) return SceneSemanticGroup::Players;

@@ -3712,6 +3712,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.ViewModelAction = CStreamSettings::Action::NoDraw;
             settings.ParticlesAction = CStreamSettings::Action::NoDraw;
             settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
+            settings.ShellsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
             settings.OverlaysAction = CStreamSettings::Action::NoDraw;
@@ -3732,6 +3733,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
             settings.ViewModelAction = CStreamSettings::Action::NoDraw;
             settings.ParticlesAction = CStreamSettings::Action::NoDraw;
+            settings.ShellsAction = CStreamSettings::Action::NoDraw;
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
@@ -3827,6 +3829,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
             settings.ViewModelAction = CStreamSettings::Action::NoDraw;
             settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
+            settings.ShellsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::ZOnly;
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
@@ -3876,6 +3879,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
             settings.ViewModelAction = CStreamSettings::Action::NoDraw;
             settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
+            settings.ShellsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::ZOnly;
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
@@ -4450,6 +4454,11 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                 StreamSettingsActionSubCommand(stream.FirstPersonLegsAction, &subArgs);
                 return;
             }
+            else if(0 == _stricmp("shellsAction", arg2)) {
+                advancedfx::CSubCommandArgs subArgs(args, 3);
+                StreamSettingsActionSubCommand(stream.ShellsAction, &subArgs);
+                return;
+            }
             else if(0 == _stricmp("playersAction", arg2)) {
                 advancedfx::CSubCommandArgs subArgs(args, 3);
                 StreamSettingsActionSubCommand(stream.PlayersAction, &subArgs);
@@ -4543,6 +4552,10 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
         );
         advancedfx::Message(
             "%s %s firstPersonLegsAction [...]\n"
+            , arg0, arg1
+        );
+        advancedfx::Message(
+            "%s %s shellsAction [...]\n"
             , arg0, arg1
         );
         advancedfx::Message(

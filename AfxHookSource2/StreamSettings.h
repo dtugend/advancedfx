@@ -39,6 +39,7 @@ public:
         , ViewModelAction(other.ViewModelAction)
         , ParticlesAction(other.ParticlesAction)
         , FirstPersonLegsAction(other.FirstPersonLegsAction)
+        , ShellsAction(other.ShellsAction)
         , PlayersAction(other.PlayersAction)
         , WorldAction(other.WorldAction)
         , SkyAction(other.SkyAction)
@@ -57,6 +58,7 @@ public:
             && Action::Draw == ViewModelAction
             && Action::Draw == ParticlesAction
             && Action::Draw == FirstPersonLegsAction
+            && Action::Draw == ShellsAction
             && Action::Draw == PlayersAction
             && Action::Draw == WorldAction
             && Action::Draw == SkyAction
@@ -86,6 +88,7 @@ public:
         if(cmp = CompareAction(ViewModelAction, o.ViewModelAction)) return cmp;
         if(cmp = CompareAction(ParticlesAction, o.ParticlesAction)) return cmp;
         if(cmp = CompareAction(FirstPersonLegsAction, o.FirstPersonLegsAction)) return cmp;
+        if(cmp = CompareAction(ShellsAction, o.ShellsAction)) return cmp;
         if(cmp = CompareAction(PlayersAction, o.PlayersAction)) return cmp;
         if(cmp = CompareAction(WorldAction, o.WorldAction)) return cmp;
         if(cmp = CompareAction(SkyAction, o.SkyAction)) return cmp;
@@ -182,6 +185,7 @@ public:
     Action ViewModelAction = Action::Draw;
     Action ParticlesAction = Action::Draw;
     Action FirstPersonLegsAction = Action::Draw;
+    Action ShellsAction = Action::Draw;
     Action PlayersAction = Action::Draw;
     Action WorldAction = Action::Draw;
     Action SkyAction = Action::Draw;
