@@ -3996,7 +3996,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
 	}
 
 	advancedfx::Message(
-		"%s normal|depth|hudBlack|hudWhite <sUiniqueStreamName> - Adds a stream of given type.\n"
+		"%s normal|depth|hudBlack|hudWhite|world|playersMatte|weaponsMatte|viewModelMatte|particlesBlack|particlesWhite <sUniqueStreamName> - Adds a stream of given type.\n"
 		, arg0
 	);
 }
@@ -4061,7 +4061,7 @@ const char * StreamSettingsActionToString(CStreamSettings::Action value) {
     case CStreamSettings::Action::ZOnly:
         return "zOnly";
     }
-    return "(unkown)";
+    return "(unknown)";
 }
 
 bool AssignStreamSettingsAction(CStreamSettings::Action &action, const char * value) {
@@ -4141,7 +4141,7 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                     }
                 }
 
-                const char * currentValue = "[unkown]";
+                const char * currentValue = "[unknown]";
                 switch(stream.Capture) {
                 case CStreamSettings::Capture_e::BeforePresent:
                     currentValue ="beforePresent";
@@ -4217,7 +4217,7 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                     }
                 }
 
-                const char * currentValue = "[unkown]";
+                const char * currentValue = "[unknown]";
                 switch(stream.CaptureType) {
                 case CStreamSettings::CaptureType_e::Rgb:
                     currentValue ="rgb";
@@ -4314,7 +4314,7 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                     }
                 }
 
-                const char * currentValue = "[unkown]";
+                const char * currentValue = "[unknown]";
                 switch(stream.DepthChannels) {
                 case CStreamSettings::DepthChannels_e::Gray:
                     currentValue ="gray";
@@ -4359,7 +4359,7 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
                     }
                 }
 
-                const char * currentValue = "[unkown]";
+                const char * currentValue = "[unknown]";
                 switch(stream.DepthMode) {
                 case CStreamSettings::DepthMode_e::Inverse:
                     currentValue ="inverse";
@@ -4644,7 +4644,7 @@ void CAfxStreams::Console_Edit(advancedfx::ICommandArgs* args) {
     }
 
 	advancedfx::Message(
-		"%s <sUiniqueStreamName> [...] - Edit stream with given name.\n"
+		"%s <sUniqueStreamName> [...] - Edit stream with given name.\n"
 		, arg0
 	);
 }
@@ -4720,7 +4720,7 @@ void CAfxStreams::Console_Remove(advancedfx::ICommandArgs* args) {
     }
 
 	advancedfx::Message(
-		"%s <sUiniqueStreamName> [...] - Remove stream with given name.\n"
+		"%s <sUniqueStreamName> [...] - Remove stream with given name.\n"
 		, arg0
 	);
 }
