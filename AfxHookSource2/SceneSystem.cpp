@@ -320,13 +320,15 @@ enum class SceneSemanticGroup : int {
 	Particles = 1,
 	FirstPersonLegs = 2,
 	Shells = 3,
-	Players = 4,
-	World = 5,
-	Sky = 6,
-	Count = 7
+	Weapons = 4,
+	Players = 5,
+	World = 6,
+	Sky = 7,
+	Count = 8
 };
 
 SceneObjectDrawPolicy g_SceneSemanticPolicies[(int)SceneSemanticGroup::Count] = {
+	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
 	SceneObjectDrawPolicy::Draw,
@@ -412,6 +414,17 @@ void SetupSceneFilterPolicies(const class CStreamSettings & settings) {
 		break;
 	default:
 		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Shells] = SceneObjectDrawPolicy::Draw;
+		break;
+	}
+	switch(settings.WeaponsAction) {
+	case CStreamSettings::Action::NoDraw:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Weapons] = SceneObjectDrawPolicy::Hide;
+		break;
+	case CStreamSettings::Action::ZOnly:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Weapons] = SceneObjectDrawPolicy::DepthPassesOnly;
+		break;
+	default:
+		g_SceneSemanticPolicies[(int)SceneSemanticGroup::Weapons] = SceneObjectDrawPolicy::Draw;
 		break;
 	}
 	switch(settings.PlayersAction) {
@@ -540,6 +553,7 @@ static const char* SceneSemanticGroupToString(SceneSemanticGroup group) {
 	case SceneSemanticGroup::Particles: return "particles";
 	case SceneSemanticGroup::FirstPersonLegs: return "firstPersonLegs";
 	case SceneSemanticGroup::Shells: return "shells";
+	case SceneSemanticGroup::Weapons: return "weapons";
 	case SceneSemanticGroup::Players: return "players";
 	case SceneSemanticGroup::World: return "world";
 	case SceneSemanticGroup::Sky: return "sky";
@@ -558,6 +572,10 @@ static bool TryGetSceneSemanticGroup(const char* value, SceneSemanticGroup& outG
 	}
 	if (0 == _stricmp(value, "firstPersonLegs")) {
 		outGroup = SceneSemanticGroup::FirstPersonLegs;
+		return true;
+	}
+	if (0 == _stricmp(value, "weapons")) {
+		outGroup = SceneSemanticGroup::Weapons;
 		return true;
 	}
 	if (0 == _stricmp(value, "shells")) {
@@ -659,10 +677,45 @@ static bool SceneDataMaterialIsPlayer(SceneObjectFilterClass filterClass, const 
 
 	return StringContains(materialName, "characters/models/")
 		|| StringContains(materialName, "agents/models/")
-		|| StringContains(materialName, "weapons/models/")
-		|| StringContains(materialName, "models/weapons/")
 		|| StringContains(materialName, "models/player/")
 		|| (filterClass == SceneObjectFilterClass::Animatable && StringContains(materialName, "compmat_")); // skinned weapons/gloves
+}
+
+static bool SceneDataMaterialIsWeapon(SceneObjectFilterClass filterClass, const char* materialName, const CBaseSceneData * pSceneData, const SceneLayerContext& context) {
+	if (materialName == nullptr) return false;
+
+	if (StringContains(materialName, "weapons/keychains/") 
+		// || StringContains(materialName, "weapons/models/shared/stattrak")
+		// || StringContains(materialName, "weapons/models/shared/nametag")
+		|| StringContains(materialName, "weapons/models/")
+		|| StringContains(materialName, "models/weapons/")
+	) {
+		return !SceneLayerContextIsPlayers(context);
+	}
+
+	if (StringContains(materialName, "compmat_"))
+		// && filterClass == SceneObjectFilterClass::Animatable)
+	{
+		if (nullptr == pSceneData) return false;
+		auto sceneObject = pSceneData->sceneObject;
+		if (nullptr == sceneObject) return false;
+		auto meshInstance = *(u_char**)((u_char*)sceneObject + 0x10);
+		if (nullptr == meshInstance) return false;
+		auto model = **(u_char***)(meshInstance + 0x8);
+		auto modelName = *(const char**)(model + 0x8);
+
+		if (StringContains(modelName, "weapons/models")) {// double check because we might get gloves in case they have skin
+			return !SceneLayerContextIsPlayers(context);
+			// auto modelState = (*(u_char**)((u_char*)sceneObject + 0x110)) + 0x10;
+			// // see 3 fn in vtable for ".?AVNetworkVar_m_modelState@CSkeletonInstance@@"
+			// auto ent = *(CEntityInstance**)(modelState - 0x140 - 0x38);
+			// auto ownerHandle = SOURCESDK::CS2::CEntityHandle::CEntityHandle(*(uint32_t*)((u_char*)ent + g_clientDllOffsets.C_BaseEntity.m_hOwnerEntity));
+			// if (ownerHandle.IsValid()) return false;
+			// return true;
+		}
+	}
+
+	return false;
 }
 
 static bool SceneDataMaterialIsShell(SceneObjectFilterClass filterClass, const char* materialName) {
@@ -672,11 +725,12 @@ static bool SceneDataMaterialIsShell(SceneObjectFilterClass filterClass, const c
 		|| StringContains(materialName, "weapons/models/shared/shells/");
 }
 
-static SceneSemanticGroup ClassifySceneObject(SceneObjectFilterClass filterClass, const SceneLayerContext& context, const char* materialName) {
+static SceneSemanticGroup ClassifySceneObject(SceneObjectFilterClass filterClass, const SceneLayerContext& context, const char* materialName, const CBaseSceneData * pSceneData) {
 	// Precedence is intentional: first-person layers contain weapon/player materials that should stay separate from world/player mattes.
 	if (SceneLayerContextIsViewModel(context)) return SceneSemanticGroup::ViewModel;
 	if (SceneLayerContextIsFirstPersonLegs(context)) return SceneSemanticGroup::FirstPersonLegs;
 	if (SceneDataMaterialIsShell(filterClass, materialName)) return SceneSemanticGroup::Shells;
+	if (SceneDataMaterialIsWeapon(filterClass, materialName, pSceneData, context)) return SceneSemanticGroup::Weapons;
 	if (SceneDataMaterialIsPlayer(filterClass, materialName)) return SceneSemanticGroup::Players;
 	if (SceneLayerContextIsSky(context)) return SceneSemanticGroup::Sky;
 	if (SceneLayerContextIsPlayers(context)) return SceneSemanticGroup::Players;
@@ -707,8 +761,8 @@ static SceneObjectDrawPolicy ApplyLayerAwarePolicy(SceneObjectFilterClass filter
 	;
 }
 
-static bool TryGetSceneSemanticPolicy(SceneObjectFilterClass filterClass, const SceneLayerContext & context, const char* materialName, SceneObjectDrawPolicy& outPolicy) {
-	SceneSemanticGroup group = ClassifySceneObject(filterClass, context, materialName);
+static bool TryGetSceneSemanticPolicy(SceneObjectFilterClass filterClass, const SceneLayerContext & context, const char* materialName, SceneObjectDrawPolicy& outPolicy, const CBaseSceneData * sceneData) {
+	SceneSemanticGroup group = ClassifySceneObject(filterClass, context, materialName, sceneData);
 	SceneObjectDrawPolicy policy = g_SceneSemanticPolicies[(int)group];
 	// Semantic draw is the default state; descriptor-class policies still apply unless a semantic group is hidden / depth-pass-only.
 	if (policy == SceneObjectDrawPolicy::Draw) return false;
@@ -793,7 +847,7 @@ static bool DebugPrintSceneData(SceneObjectFilterClass filterClass, const SceneL
 			count,
 			context.ViewName ? context.ViewName : "?",
 			context.ViewPass ? context.ViewPass : "?",
-			SceneSemanticGroupToString(ClassifySceneObject(filterClass, context, materialName)),
+			SceneSemanticGroupToString(ClassifySceneObject(filterClass, context, materialName, sceneData)),
 			descName ? descName : "?",
 			materialName ? materialName : "?",
 			sceneObject
@@ -825,14 +879,14 @@ static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterCla
 
 	if (!SceneObjectFilterClassHasKnownSceneDataLayout(filterClass) || nullptr == pSceneData || pSceneData->material == nullptr) {
 		SceneObjectDrawPolicy semanticPolicy;
-		if (TryGetSceneSemanticPolicy(filterClass, context, nullptr, semanticPolicy)) return semanticPolicy;
+		if (TryGetSceneSemanticPolicy(filterClass, context, nullptr, semanticPolicy, pSceneData)) return semanticPolicy;
 		return ApplyLayerAwarePolicy(filterClass, context, nullptr, GetSceneObjectClassPolicy(filterClass));
 	}
 
 	const char* materialName = pSceneData->material->GetName();
 	if (materialName == nullptr) {
 		SceneObjectDrawPolicy semanticPolicy;
-		if (TryGetSceneSemanticPolicy(filterClass, context, nullptr, semanticPolicy)) return semanticPolicy;
+		if (TryGetSceneSemanticPolicy(filterClass, context, nullptr, semanticPolicy, pSceneData)) return semanticPolicy;
 		return ApplyLayerAwarePolicy(filterClass, context, nullptr, GetSceneObjectClassPolicy(filterClass));
 	}
 
@@ -849,7 +903,7 @@ static SceneObjectDrawPolicy GetSceneDataPolicy(SceneObjectFilterClass filterCla
 	}	
 
 	SceneObjectDrawPolicy semanticPolicy;
-	if (TryGetSceneSemanticPolicy(filterClass, context, materialName, semanticPolicy)) return semanticPolicy;
+	if (TryGetSceneSemanticPolicy(filterClass, context, materialName, semanticPolicy, pSceneData)) return semanticPolicy;
 
 	return ApplyLayerAwarePolicy(filterClass, context, materialName, GetSceneObjectClassPolicy(filterClass));
 }
@@ -1374,6 +1428,7 @@ CON_COMMAND(__mirv_scene_filter, "")
 		"%s viewModel draw|hide|zonly - Controls viewmodel layers.\n"
 		"%s particles draw|hide|zonly - Controls viewmodel effect layers.\n"
 		"%s firstPersonLegs draw|hide|zonly - Controls first person legs layers.\n"
+		"%s weapons draw|hide|zonly - Controls weapons layers.\n"
 		"%s players draw|hide|zonly - Controls player character layers.\n"
 		"%s world draw|hide|zonly - Controls layers not matched by another semantic group.\n"
 		"%s sky draw|hide|zonly - Controls 3D skybox layers matched in the scene draw path.\n"
