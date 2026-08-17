@@ -3716,19 +3716,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.WeaponsAction = CStreamSettings::Action::NoDraw;
             settings.PlayersAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
-            settings.OverlaysAction = CStreamSettings::Action::NoDraw;
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("0");
-                settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("1");
-                settings.AfterCommands.emplace_back(command);
-            }
+            settings.OverlaysAction = CStreamSettings::Action::NoDraw;          
         } else if(0 == _stricmp(arg1,"playersMatte")) {
             settings.Capture = CStreamSettings::Capture_e::BeforeUi;
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
@@ -3742,12 +3730,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("0");
-                settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
                 command.emplace_back("r_csgo_render_overlays");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
@@ -3757,12 +3739,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
                 command.emplace_back("r_csgo_render_decals");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("1");
-                settings.AfterCommands.emplace_back(command);
             }
             {
                 std::list<std::string> command;
@@ -3790,12 +3766,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("0");
-                settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
                 command.emplace_back("r_csgo_render_overlays");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
@@ -3805,12 +3775,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
                 command.emplace_back("r_csgo_render_decals");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("1");
-                settings.AfterCommands.emplace_back(command);
             }
             {
                 std::list<std::string> command;
@@ -3836,12 +3800,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("0");
-                settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
                 command.emplace_back("r_csgo_render_overlays");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
@@ -3851,12 +3809,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
                 command.emplace_back("r_csgo_render_decals");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_drawparticles");
-                command.emplace_back("1");
-                settings.AfterCommands.emplace_back(command);
             }
             {
                 std::list<std::string> command;
