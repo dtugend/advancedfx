@@ -1021,7 +1021,8 @@ void __fastcall new_InitDrawingData(unsigned char * pDrawingData,void *pSceneVie
 				ErrorBox("Failed to detour SoftwareCommandList::Commit.");
 				return;
 			}				
-		}		
+		}
+		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
 
 		/*void** pSceneViewVtable = *(void***)pSceneView;
 		SceneLayerContext context;
@@ -1065,6 +1066,9 @@ NoDrawSceneData_t org_NoDrawSceneData = nullptr;
 
 void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneData) {
 	if(g_bSceneFilterSystemActive && nullptr != pDrawingData) {
+		void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
+		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
+
 		SceneLayerContext context;
 		SetContextFromDrawingData(context, pDrawingData);
 
@@ -1091,7 +1095,6 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 		case SceneObjectDrawPolicy::DepthPassesOnly:
 		case SceneObjectDrawPolicy::Hide:
 			{
-				void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
 				BlockDrawing(pCRenderContextDx11_SoftwareCommandList);
 				org_DrawSceneData(pDrawingData,pSceneData);
 				return;
@@ -1104,6 +1107,9 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 
 void __fastcall new_NoDrawSceneData(void * pDrawingData) {
 	if(g_bSceneFilterSystemActive && nullptr != pDrawingData) {
+		void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
+		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
+
 		SceneLayerContext context;
 		SetContextFromDrawingData(context, pDrawingData);
 
@@ -1121,7 +1127,6 @@ void __fastcall new_NoDrawSceneData(void * pDrawingData) {
 		case SceneObjectDrawPolicy::DepthPassesOnly:
 		case SceneObjectDrawPolicy::Hide:
 			{
-				void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
 				BlockDrawing(pCRenderContextDx11_SoftwareCommandList);
 				org_NoDrawSceneData(pDrawingData);
 				return;
