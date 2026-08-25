@@ -1727,7 +1727,7 @@ void FUN_18009c880(longlong param_1,longlong param_2)
 		//DetourAttach(&(PVOID&)org_RenderLayerDrawListPart, new_RenderLayerDrawListPart);
 		DetourAttach(&(PVOID&)org_InitDrawingData, new_InitDrawingData);
 		DetourAttach(&(PVOID&)org_DrawSceneData, new_DrawSceneData);
-		//DetourAttach(&(PVOID&)org_NoDrawSceneData, new_NoDrawSceneData);
+		DetourAttach(&(PVOID&)org_NoDrawSceneData, new_NoDrawSceneData);
 
 		if(NO_ERROR != DetourTransactionCommit()) {
 			ErrorBox("Failed to detour SceneSystem functions.");
