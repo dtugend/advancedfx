@@ -518,6 +518,7 @@ static const char* SceneObjectFilterClassToString(SceneObjectFilterClass filterC
 	case SceneObjectFilterClass::SkyBox6Face: return "skybox6face";
 	case SceneObjectFilterClass::ProjectedDecal: return "projecteddecal";
 	case SceneObjectFilterClass::SmokeVolume: return "smokevolume";
+	case SceneObjectFilterClass::Particles: return "particles";
 	default: return "unknown";
 	}
 }
@@ -742,8 +743,8 @@ static SceneSemanticGroup ClassifySceneObject(SceneObjectFilterClass filterClass
 	if (SceneDataMaterialIsShell(filterClass, materialName)) return SceneSemanticGroup::Shells;
 	if (SceneDataMaterialIsWeapon(filterClass, materialName, pSceneData, context)) return SceneSemanticGroup::Weapons;
 	if (SceneDataMaterialIsPlayer(filterClass, materialName)) return SceneSemanticGroup::Players;
-	if (SceneLayerContextIsSky(context)) return SceneSemanticGroup::Sky;
 	if (SceneLayerContextIsPlayers(context)) return SceneSemanticGroup::Players;
+	if (SceneLayerContextIsSky(context)) return SceneSemanticGroup::Sky;
 	if (filterClass == SceneObjectFilterClass::SmokeVolume) return SceneSemanticGroup::Smoke;
 	if (filterClass == SceneObjectFilterClass::Particles && !SceneLayerContextIsCables(context)) return SceneSemanticGroup::Particles;
 	return SceneSemanticGroup::World;
@@ -1000,6 +1001,11 @@ void SetContextFromDrawingData(SceneLayerContext & context, void * pDrawingData)
 	context.Flags = *(uint32_t*)((unsigned char*)pSceneLayer + g_SceneLayer_Flags_Offset);	
 }
 
+void SoftwareCommandList_Commit(void * pCRenderContextDx11_SoftwareCommandList){
+	void** vtable = *(void***)pCRenderContextDx11_SoftwareCommandList;
+	((SoftwareCommandList_Commit_t)vtable[11])(pCRenderContextDx11_SoftwareCommandList);
+}
+
 typedef void (__fastcall * InitDrawingData_t)(unsigned char * pDrawingData,void *pSceneView,void *pSceneLayer,uint32_t unkFlags4);
 InitDrawingData_t org_InitDrawingData = nullptr;
 void __fastcall new_InitDrawingData(unsigned char * pDrawingData,void *pSceneView,void *pSceneLayer,uint32_t unkFlags4) {
@@ -1008,6 +1014,7 @@ void __fastcall new_InitDrawingData(unsigned char * pDrawingData,void *pSceneVie
 	if(g_bSceneFilterSystemActive && pDrawingData)
 	{
 		void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
+		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
 		if(org_SoftwareCommandList_Commit == nullptr) {
 			void** vtable = *(void***)pCRenderContextDx11_SoftwareCommandList;
 			org_SoftwareCommandList_Commit = (SoftwareCommandList_Commit_t)vtable[11];
@@ -1021,8 +1028,7 @@ void __fastcall new_InitDrawingData(unsigned char * pDrawingData,void *pSceneVie
 				ErrorBox("Failed to detour SoftwareCommandList::Commit.");
 				return;
 			}				
-		}
-		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
+		}		
 
 		/*void** pSceneViewVtable = *(void***)pSceneView;
 		SceneLayerContext context;
@@ -1052,7 +1058,7 @@ void __fastcall new_InitDrawingData(unsigned char * pDrawingData,void *pSceneVie
 			|| StringContains(context.ViewPass,"FlashbangOverlay")
 			|| StringContains(context.ViewPass,"Fade To Black")
 			)
-		) {
+		) {	
 			BlockDrawing(pCRenderContextDx11_SoftwareCommandList);
 		}
 	}
@@ -1066,8 +1072,8 @@ NoDrawSceneData_t org_NoDrawSceneData = nullptr;
 
 void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneData) {
 	if(g_bSceneFilterSystemActive && nullptr != pDrawingData) {
-		void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
-		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
+		//void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
+		//CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
 
 		SceneLayerContext context;
 		SetContextFromDrawingData(context, pDrawingData);
@@ -1094,12 +1100,7 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 			break;
 		case SceneObjectDrawPolicy::DepthPassesOnly:
 		case SceneObjectDrawPolicy::Hide:
-			{
-				BlockDrawing(pCRenderContextDx11_SoftwareCommandList);
-				org_DrawSceneData(pDrawingData,pSceneData);
-				return;
-			}
-			break;
+			return;
 		}			
 	}
 	org_DrawSceneData(pDrawingData,pSceneData);
@@ -1107,8 +1108,8 @@ void __fastcall new_DrawSceneData(void * pDrawingData, CBaseSceneData* pSceneDat
 
 void __fastcall new_NoDrawSceneData(void * pDrawingData) {
 	if(g_bSceneFilterSystemActive && nullptr != pDrawingData) {
-		void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
-		CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
+		//void * pCRenderContextDx11_SoftwareCommandList = ((void **)pDrawingData)[4];
+		//CheckAndDo_Untoggle_Drawing(pCRenderContextDx11_SoftwareCommandList);
 
 		SceneLayerContext context;
 		SetContextFromDrawingData(context, pDrawingData);
@@ -1126,12 +1127,8 @@ void __fastcall new_NoDrawSceneData(void * pDrawingData) {
 			break;
 		case SceneObjectDrawPolicy::DepthPassesOnly:
 		case SceneObjectDrawPolicy::Hide:
-			{
-				BlockDrawing(pCRenderContextDx11_SoftwareCommandList);
-				org_NoDrawSceneData(pDrawingData);
-				return;
-			}
-			break;
+			return;
+
 		}
 	}
 
