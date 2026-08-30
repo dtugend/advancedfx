@@ -562,10 +562,30 @@ typedef void (STDMETHODCALLTYPE * OMSetBlendState_t)(  ID3D11DeviceContext * Thi
 
 OMSetBlendState_t g_Old_OMSetBlendState = nullptr;
 
+typedef void (STDMETHODCALLTYPE * OMSetDepthStencilState_t)(  ID3D11DeviceContext * This, 
+    /* [annotation] */ 
+    _In_opt_  ID3D11DepthStencilState *pDepthStencilState,
+    /* [annotation] */ 
+    _In_  UINT StencilRef);
+
+OMSetDepthStencilState_t g_Old_OMSetDepthStencilState = nullptr;
+
 struct CNoDrawBlendState {
 public:
   void OnTargetBegin(ID3D11Device * pDevice) {
         if(pDevice) {
+            D3D11_DEPTH_STENCIL_DESC dsDesc {
+                FALSE, // DepthEnable;
+                D3D11_DEPTH_WRITE_MASK_ZERO, // DepthWriteMask;
+                D3D11_COMPARISON_ALWAYS, // DepthFunc;
+                FALSE, // StencilEnable;
+                0, // StencilReadMask;
+                0, // StencilWriteMask;
+                {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS}, //FrontFace;
+                {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS} // BackFace;
+            };
+            pDevice->CreateDepthStencilState(&dsDesc, &m_DsState);
+
             D3D11_BLEND_DESC blendDesc{
                 FALSE, // AlphaToCoverageEnable
                 FALSE, // IndependentBlendEnable
@@ -595,6 +615,14 @@ public:
     }
 
     void OnTargetEnd() {
+        if (m_DsState) {
+            m_DsState->Release();
+            m_DsState = nullptr;
+        }
+        if (m_OrgDsState) {
+            m_OrgDsState->Release();
+            m_OrgDsState = nullptr;
+        }
         if (m_BlendState) {
             m_BlendState->Release();
             m_BlendState = nullptr;
@@ -607,16 +635,25 @@ public:
     }
 
     void Block(ID3D11DeviceContext * pContext){
-        if(m_Block || nullptr == g_Old_OMSetBlendState) return;
+        if(m_Block || nullptr == g_Old_OMSetBlendState || nullptr == g_Old_OMSetDepthStencilState) return;
         m_Block = true;
 
         pContext->OMGetBlendState(&m_OrgBlendState,m_OrgBlendFactor,&m_OrgSampleMask);
-        g_Old_OMSetBlendState(pContext, m_BlendState,nullptr,0x0);
+        g_Old_OMSetBlendState(pContext, m_BlendState,nullptr,m_OrgSampleMask);
+
+        pContext->OMGetDepthStencilState(&m_OrgDsState, &m_OrgStencilRef);
+        g_Old_OMSetDepthStencilState(pContext, m_DsState, 0);
     }
 
     void Unblock(ID3D11DeviceContext * pContext) {
         if(!m_Block) return;
         m_Block = false;
+
+        g_Old_OMSetDepthStencilState(pContext, m_OrgDsState,m_OrgStencilRef);
+        if(m_OrgDsState) {
+            m_OrgDsState->Release();
+            m_OrgDsState = nullptr;
+        }
 
         g_Old_OMSetBlendState(pContext, m_OrgBlendState,m_OrgBlendFactor,m_OrgSampleMask);
         if(m_OrgBlendState) {
@@ -655,15 +692,40 @@ public:
         }
         m_OrgSampleMask = SampleMask;
 
+        g_Old_OMSetBlendState(pContext, m_BlendState,nullptr,m_OrgSampleMask);
+
+        return false;
+    }
+
+    bool OnOMSetDepthStencilState(  ID3D11DeviceContext * pContext, 
+    /* [annotation] */ 
+    _In_opt_  ID3D11DepthStencilState *pDepthStencilState,
+    /* [annotation] */ 
+    _In_  UINT StencilRef) {
+        if(!m_Block) return true;
+
+        if(pDepthStencilState) {
+            pDepthStencilState->AddRef();
+        }
+        if(m_OrgDsState) {
+            m_OrgDsState->Release();
+            m_OrgDsState = nullptr;
+        }
+        m_OrgDsState = pDepthStencilState;
+        m_OrgStencilRef = StencilRef;
+        
         return false;
     }
 
 private:
     bool m_Block = false;
+    ID3D11DepthStencilState* m_DsState = nullptr;
+    ID3D11DepthStencilState* m_OrgDsState = nullptr;
     ID3D11BlendState* m_BlendState = nullptr;
     FLOAT m_OrgBlendFactor[4]={1,1,1,1};
     ID3D11BlendState* m_OrgBlendState = nullptr;
     UINT m_OrgSampleMask;
+    UINT m_OrgStencilRef;
 } g_NoDraw;
 
 class CDepthCompositor {
@@ -1684,7 +1746,16 @@ void STDMETHODCALLTYPE New_OMSetBlendState( ID3D11DeviceContext * This,
 
     if(g_NoDraw.OnOMSetBlendState(This,pBlendState,BlendFactor,SampleMask))
         g_Old_OMSetBlendState(This,pBlendState,BlendFactor,SampleMask);
+}
 
+void STDMETHODCALLTYPE New_OMSetDepthStencilState(  ID3D11DeviceContext * This, 
+    /* [annotation] */ 
+    _In_opt_  ID3D11DepthStencilState *pDepthStencilState,
+    /* [annotation] */ 
+    _In_  UINT StencilRef) {
+
+    if(g_NoDraw.OnOMSetDepthStencilState(This,pDepthStencilState,StencilRef))
+        g_Old_OMSetDepthStencilState(This,pDepthStencilState,StencilRef);
 }
 
 class IRenderThreadCallback abstract {
@@ -2012,6 +2083,7 @@ void Hook_Context(ID3D11DeviceContext * pDeviceContext) {
         DetourDetach(&(PVOID&)g_Old_PSSetShader, New_PSSetShader);
         DetourDetach(&(PVOID&)g_Old_OMSetRenderTargets, New_OMSetRenderTargets);
         DetourDetach(&(PVOID&)g_Old_OMSetBlendState, New_OMSetBlendState);
+        DetourDetach(&(PVOID&)g_Old_OMSetDepthStencilState, New_OMSetDepthStencilState);
         DetourDetach(&(PVOID&)g_Old_ClearRenderTargetView, New_ClearRenderTargetView);
         DetourDetach(&(PVOID&)g_Old_ClearDepthStencilView, New_ClearDepthStencilView);
         //DetourDetach(&(PVOID&)g_Old_ResolveSubresource, New_ResolveSubresource);
@@ -2025,6 +2097,7 @@ void Hook_Context(ID3D11DeviceContext * pDeviceContext) {
     g_Old_PSSetShader = (PSSetShader_t)vtable[9];
     g_Old_OMSetRenderTargets = (OMSetRenderTargets_t)vtable[33];
     g_Old_OMSetBlendState = (OMSetBlendState_t)vtable[35];
+    g_Old_OMSetDepthStencilState = (OMSetDepthStencilState_t)vtable[36];
     g_Old_ClearRenderTargetView = (ClearRenderTargetView_t)vtable[50];
     g_Old_ClearDepthStencilView = (ClearDepthStencilView_t)vtable[53];
     //g_Old_ResolveSubresource = (ResolveSubresource_t)vtable[57];
@@ -2032,6 +2105,7 @@ void Hook_Context(ID3D11DeviceContext * pDeviceContext) {
     DetourAttach(&(PVOID&)g_Old_PSSetShader, New_PSSetShader);
     DetourAttach(&(PVOID&)g_Old_OMSetRenderTargets, New_OMSetRenderTargets);
     DetourAttach(&(PVOID&)g_Old_OMSetBlendState, New_OMSetBlendState);
+    DetourAttach(&(PVOID&)g_Old_OMSetDepthStencilState, New_OMSetDepthStencilState);
     DetourAttach(&(PVOID&)g_Old_ClearRenderTargetView, New_ClearRenderTargetView);
     DetourAttach(&(PVOID&)g_Old_ClearDepthStencilView, New_ClearDepthStencilView);
     //DetourAttach(&(PVOID&)g_Old_ResolveSubresource, New_ResolveSubresource);
