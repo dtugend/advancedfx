@@ -3872,6 +3872,7 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.WorldAction = CStreamSettings::Action::NoDraw;
             settings.SkyAction = CStreamSettings::Action::NoDraw;
             settings.SmokeAction = CStreamSettings::Action::NoDraw;
+            settings.OverlaysAction = CStreamSettings::Action::NoDraw;
             {
                 std::list<std::string> command;
                 command.emplace_back("r_csgo_render_overlays");
@@ -3904,19 +3905,13 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.ClearOverride = true;
             settings.Capture = CStreamSettings::Capture_e::BeforeUi;
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
-            settings.ViewModelAction = CStreamSettings::Action::NoDraw;
-            settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
+            settings.ViewModelAction = CStreamSettings::Action::ZOnly;
+            settings.FirstPersonLegsAction = CStreamSettings::Action::ZOnly;
             settings.ShellsAction = CStreamSettings::Action::ZOnly;
             settings.WeaponsAction = CStreamSettings::Action::ZOnly;
             settings.PlayersAction = CStreamSettings::Action::ZOnly;
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_csgo_postprocess_enable");
-                command.emplace_back("0");
-                settings.BeforeCommands.emplace_back(command);
-            }
             {
                 std::list<std::string> command;
                 command.emplace_back("r_csgo_render_overlays");
@@ -3928,12 +3923,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
                 command.emplace_back("r_csgo_render_decals");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_csgo_postprocess_enable");
-                command.emplace_back("1");
-                settings.AfterCommands.emplace_back(command);
             }
             {
                 std::list<std::string> command;
@@ -3955,19 +3944,13 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
             settings.ClearOverride = true;
             settings.Capture = CStreamSettings::Capture_e::BeforeUi;
             settings.CaptureType = CStreamSettings::CaptureType_e::Rgba;
-            settings.ViewModelAction = CStreamSettings::Action::NoDraw;
-            settings.FirstPersonLegsAction = CStreamSettings::Action::NoDraw;
+            settings.ViewModelAction = CStreamSettings::Action::ZOnly;
+            settings.FirstPersonLegsAction = CStreamSettings::Action::ZOnly;
             settings.ShellsAction = CStreamSettings::Action::ZOnly;
             settings.WeaponsAction = CStreamSettings::Action::ZOnly;
             settings.PlayersAction = CStreamSettings::Action::ZOnly;
             settings.WorldAction = CStreamSettings::Action::ZOnly;
             settings.SkyAction = CStreamSettings::Action::ZOnly;
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_csgo_postprocess_enable");
-                command.emplace_back("0");
-                settings.BeforeCommands.emplace_back(command);
-            }
             {
                 std::list<std::string> command;
                 command.emplace_back("r_csgo_render_overlays");
@@ -3979,12 +3962,6 @@ void CAfxStreams::Console_Add(advancedfx::ICommandArgs* args) {
                 command.emplace_back("r_csgo_render_decals");
                 command.emplace_back("0");
                 settings.BeforeCommands.emplace_back(command);
-            }
-            {
-                std::list<std::string> command;
-                command.emplace_back("r_csgo_postprocess_enable");
-                command.emplace_back("1");
-                settings.AfterCommands.emplace_back(command);
             }
             {
                 std::list<std::string> command;
